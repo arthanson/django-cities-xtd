@@ -9,7 +9,7 @@ addons:
   postgresql: "10.21"
   apt:
     packages:
-    - postgresql-10.21-postgis-2.4
+    - postgresql-10-postgis-2.4
 
 python:
   - "3.6"
