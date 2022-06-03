@@ -6,11 +6,7 @@ services:
   - postgresql
 
 addons:
-  postgresql: "9.6"
-  # https://gis.stackexchange.com/a/252610
-  # apt:
-  #   packages:
-  #     - postgresql-9.6-postgis-2.3
+  postgresql: "12.11"
 
 python:
   - "3.6"
