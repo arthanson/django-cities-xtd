@@ -11,7 +11,7 @@ if DJANGO_VERSION < (4, 0):
     except (NameError, ImportError):
         from django.utils.encoding import force_text
 else:
-        from django.utils.encoding import force_str as force_text
+    from django.utils.encoding import force_str as force_text
 
 from django.utils.safestring import mark_safe, SafeText
 
