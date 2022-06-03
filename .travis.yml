@@ -6,6 +6,7 @@ services:
   - postgresql
 
 addons:
+  # postgres
   postgresql: "10"
   apt:
     packages:
