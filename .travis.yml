@@ -35,7 +35,7 @@ before_install:
   # https://gis.stackexchange.com/a/252610
   - wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
   - sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" >> /etc/apt/sources.list.d/postgresql.list'
-  - sudo apt-get install --yes postgresql-11-postgis-2
+  - sudo apt-get install --yes postgresql-11-postgis-2.5
 
 install:
   - pip install $DJANGO_VERSION
