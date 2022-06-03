@@ -1,5 +1,6 @@
 from random import choice
 from string import ascii_uppercase, digits
+from django import VERSION as DJANGO_VERSION
 
 from .conf import (ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION, DJANGO_VERSION)
 
