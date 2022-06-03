@@ -4,7 +4,7 @@ from string import ascii_uppercase, digits
 from .conf import (ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION, DJANGO_VERSION)
 
 
-if DJANGO_VERSION < 4:
+if DJANGO_VERSION < (4, 0):
     try:
         from django.utils.encoding import force_unicode as force_text
     except (NameError, ImportError):
