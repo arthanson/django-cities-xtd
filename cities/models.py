@@ -15,6 +15,7 @@ import swapper
 from django.contrib.gis.db.models import PointField
 from django.contrib.gis.geos import Point
 from django.db import models, transaction
+from django.db.models import Manager as GeoManager
 from model_utils import Choices
 
 from .managers import AlternativeNameManager
@@ -32,11 +33,6 @@ __all__ = [
     "AlternativeName",
 ]
 
-
-if DJANGO_VERSION < 2:
-    from django.contrib.gis.db.models import GeoManager
-else:
-    from django.db.models import Manager as GeoManager
 
 slugify_func = SLUGIFY_FUNCTION
 
