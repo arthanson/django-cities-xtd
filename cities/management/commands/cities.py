@@ -71,11 +71,6 @@ City = load_model("cities", "City")
 # Only log errors during Travis tests
 LOGGER_NAME = os.environ.get("TRAVIS_LOGGER_NAME", "cities")
 
-# TODO: Remove backwards compatibility once django-cities requires Django 1.7
-# or 1.8 LTS.
-# _transact = (transaction.commit_on_success if django_version < (1, 6) else
-#              transaction.atomic)
-
 
 class Command(BaseCommand):
     if hasattr(settings, "data_dir"):
@@ -86,30 +81,6 @@ class Command(BaseCommand):
         )
         data_dir = os.path.join(app_dir, "data")
     logger = logging.getLogger(LOGGER_NAME)
-
-    if django_version < (1, 8):
-        option_list = getattr(BaseCommand, "option_list", ()) + (
-            make_option(
-                "--force",
-                action="store_true",
-                default=False,
-                help="Import even if files are up-to-date.",
-            ),
-            make_option(
-                "--import",
-                metavar="DATA_TYPES",
-                default="all",
-                help="Selectively import data. Comma separated list of data "
-                + "types: "
-                + str(import_opts).replace("'", ""),
-            ),
-            make_option(
-                "--flush",
-                metavar="DATA_TYPES",
-                default="",
-                help="Selectively flush data. Comma separated list of data types.",
-            ),
-        )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -774,26 +745,19 @@ class Command(BaseCommand):
                 # we fall back to degree search, MYSQL has no support
                 # and Spatialite with SRID 4236.
                 try:
-                    if django_version < (1, 9):
-                        city = (
-                            City.objects.filter(population__gt=city_pop_min)
-                            .distance(defaults["location"])
-                            .order_by("distance")[0]
-                        )
-                    else:
-                        city = (
-                            City.objects.filter(
-                                location__distance_lte=(
-                                    defaults["location"],
-                                    D(km=1000),
-                                )
+                    city = (
+                        City.objects.filter(
+                            location__distance_lte=(
+                                defaults["location"],
+                                D(km=1000),
                             )
-                            .annotate(
-                                distance=Distance("location", defaults["location"])
-                            )
-                            .order_by("distance")
-                            .first()
                         )
+                        .annotate(
+                            distance=Distance("location", defaults["location"])
+                        )
+                        .order_by("distance")
+                        .first()
+                    )
                 except City.DoesNotExist as e:
                     self.logger.warning(
                         "District: %s: DB backend does not support native '.distance(...)' query "

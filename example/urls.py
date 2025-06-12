@@ -13,11 +13,7 @@ from cities.models import City, Country, District, PostalCode, Region
 
 
 def patterns(prefix, *args):
-    if DJANGO_VERSION < (1, 9):
-        from django.conf.urls import patterns as django_patterns
-
-        return django_patterns(prefix, *args)
-    elif prefix != "":
+    if prefix != "":
         raise Exception(
             "You need to update your URLConf to be a list of URL " "objects"
         )

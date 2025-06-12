@@ -6,14 +6,8 @@ from math import acos, cos, radians, sin
 import six
 from django import VERSION as DJANGO_VERSION
 
-if DJANGO_VERSION < (4, 0):
-    try:
-        from django.utils.encoding import force_unicode as force_text
-    except (NameError, ImportError):
-        from django.utils.encoding import force_text
-else:
-    from django.utils.encoding import force_str as force_text
-
+from django.utils.encoding import force_str as force_text
+from django.utils.functional import keep_lazy
 from django.utils.safestring import SafeText, mark_safe
 
 from .conf import CONTINENT_DATA
@@ -81,25 +75,15 @@ def default_slugify(obj, value):
     return mark_safe(value)
 
 
-if DJANGO_VERSION < (1, 10):
-    from django.utils.functional import allow_lazy
 
-    default_slugify = allow_lazy(default_slugify, six.text_type, SafeText)
-else:
-    from django.utils.functional import keep_lazy
-
-    default_slugify = keep_lazy(six.text_type, SafeText)(default_slugify)
+default_slugify = keep_lazy(six.text_type, SafeText)(default_slugify)
 
 
 # DJANGO BACKWARDS-COMPATIBLE PATTERNS
 
 
 def patterns(prefix, *args):
-    if DJANGO_VERSION < (1, 9):
-        from django.conf.urls import patterns as django_patterns
-
-        return django_patterns(prefix, *args)
-    elif prefix != "":
+    if prefix != "":
         raise Exception(
             "You need to update your URLConf to be a list of URL " "objects"
         )
