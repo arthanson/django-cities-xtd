@@ -4,8 +4,6 @@ import unicodedata
 from math import acos, cos, radians, sin
 
 import six
-from django import VERSION as DJANGO_VERSION
-
 from django.utils.encoding import force_str as force_text
 from django.utils.functional import keep_lazy
 from django.utils.safestring import SafeText, mark_safe
@@ -73,7 +71,6 @@ def default_slugify(obj, value):
     value = re.sub(starting_chars_rgx, "", value)
     value = re.sub(ending_chars_rgx, "", value)
     return mark_safe(value)
-
 
 
 default_slugify = keep_lazy(six.text_type, SafeText)(default_slugify)

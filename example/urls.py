@@ -1,12 +1,6 @@
-from django import VERSION as DJANGO_VERSION
-
-try:
-    from django.conf.urls import url
-except ImportError:
-    from django.urls import re_path as url
-
 from django.conf.urls import include
 from django.contrib import admin
+from django.urls import re_path as url
 from django.views.generic import ListView
 
 from cities.models import City, Country, District, PostalCode, Region

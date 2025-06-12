@@ -1,8 +1,6 @@
 from random import choice
 from string import ascii_uppercase, digits
 
-from .conf import ALTERNATIVE_NAME_TYPES, DJANGO_VERSION, SLUGIFY_FUNCTION
-
 import swapper
 from django.contrib.gis.db.models import PointField
 from django.contrib.gis.geos import Point
@@ -11,6 +9,7 @@ from django.db.models import Manager as GeoManager
 from django.utils.encoding import force_str as force_text
 from model_utils import Choices
 
+from .conf import ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION
 from .managers import AlternativeNameManager
 from .util import unicode_func
 

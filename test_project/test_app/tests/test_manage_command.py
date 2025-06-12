@@ -47,7 +47,7 @@ class SkipCitiesWithEmptyRegionsManageCommandTestCase(
             force=True,
             **{
                 "import": "country,region,subregion,city,district",
-            }
+            },
         )
         cls.counts = {
             "countries": Country.objects.count(),
@@ -91,7 +91,7 @@ class ManageCommandTestCase(
             force=True,
             **{
                 "import": "country,region,subregion,city,district,alt_name,postal_code",
-            }
+            },
         )
         cls.counts = {
             "countries": Country.objects.count(),
@@ -115,7 +115,7 @@ class ManageCommandTestCase(
             force=True,
             **{
                 "import": "country,region,subregion,city,alt_name,postal_code",
-            }
+            },
         )
         self.assertEqual(Country.objects.count(), self.counts["countries"])
         self.assertEqual(Region.objects.count(), self.counts["regions"])
@@ -161,7 +161,7 @@ class AllLocalesManageCommandTestCase(
             force=True,
             **{
                 "import": "country,region,subregion,city,district,alt_name",
-            }
+            },
         )
         cls.counts = {
             "countries": Country.objects.count(),

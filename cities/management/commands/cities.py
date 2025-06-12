@@ -31,9 +31,7 @@ except ImportError:
     from urllib import urlopen
 
 from itertools import chain
-from optparse import make_option
 
-from django import VERSION as django_version
 from django.contrib.gis.gdal.envelope import Envelope
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
@@ -244,7 +242,7 @@ class Command(BaseCommand):
         # continents as ForeignKeys to the Continent models, otherwise assume
         # they are still the CharField(max_length=2) and import them the old way
         import_continents_as_fks = (
-            type(Country._meta.get_field("continent")) == ForeignKey
+            type(Country._meta.get_field("continent")) is ForeignKey
         )
 
         for item in tqdm(
@@ -293,7 +291,7 @@ class Command(BaseCommand):
                 defaults["language_codes"] = item["languages"]
             elif (
                 hasattr(Country, "languages")
-                and type(getattr(Country, "languages")) == CharField
+                and type(getattr(Country, "languages")) is CharField
             ):
                 defaults["languages"] = item["languages"]
 
@@ -752,13 +750,11 @@ class Command(BaseCommand):
                                 D(km=1000),
                             )
                         )
-                        .annotate(
-                            distance=Distance("location", defaults["location"])
-                        )
+                        .annotate(distance=Distance("location", defaults["location"]))
                         .order_by("distance")
                         .first()
                     )
-                except City.DoesNotExist as e:
+                except City.DoesNotExist:
                     self.logger.warning(
                         "District: %s: DB backend does not support native '.distance(...)' query "
                         "falling back to two degree search",
@@ -1155,24 +1151,24 @@ class Command(BaseCommand):
                 for args_dict in postal_code_args:
                     num_pcs = PostalCode.objects.filter(
                         *args_dict["args"],
-                        **{k: v for k, v in args_dict.items() if k != "args"}
+                        **{k: v for k, v in args_dict.items() if k != "args"},
                     ).count()
                     if num_pcs == 1:
                         pc = PostalCode.objects.get(
                             *args_dict["args"],
-                            **{k: v for k, v in args_dict.items() if k != "args"}
+                            **{k: v for k, v in args_dict.items() if k != "args"},
                         )
                         break
                     elif num_pcs > 1:
                         pcs = PostalCode.objects.filter(
                             *args_dict["args"],
-                            **{k: v for k, v in args_dict.items() if k != "args"}
+                            **{k: v for k, v in args_dict.items() if k != "args"},
                         )
                         self.logger.debug("item: {}\nresults: {}".format(item, pcs))
                         # Raise a MultipleObjectsReturned exception
                         PostalCode.objects.get(
                             *args_dict["args"],
-                            **{k: v for k, v in args_dict.items() if k != "args"}
+                            **{k: v for k, v in args_dict.items() if k != "args"},
                         )
                 else:
                     self.logger.debug("Creating postal code: {}".format(item))
