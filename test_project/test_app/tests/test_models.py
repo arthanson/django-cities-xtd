@@ -44,9 +44,7 @@ class CountryTestCase(SlugModelTest, TestCase):
 class RegionTestCase(SlugModelTest, TestCase):
 
     def instantiate(self):
-        country = models.Country(
-            population=0
-        )
+        country = models.Country(population=0)
         country.save()
         return models.Region(
             country=country,
@@ -56,9 +54,7 @@ class RegionTestCase(SlugModelTest, TestCase):
 class SubregionTestCase(SlugModelTest, TestCase):
 
     def instantiate(self):
-        country = models.Country(
-            population=0
-        )
+        country = models.Country(population=0)
         country.save()
         region = models.Region(
             country=country,
@@ -72,9 +68,7 @@ class SubregionTestCase(SlugModelTest, TestCase):
 class CityTestCase(SlugModelTest, TestCase):
 
     def instantiate(self):
-        country = models.Country(
-            population=0
-        )
+        country = models.Country(population=0)
         country.save()
         return models.City(
             country=country,
@@ -86,9 +80,7 @@ class CityTestCase(SlugModelTest, TestCase):
 class DistrictTestCase(SlugModelTest, TestCase):
 
     def instantiate(self):
-        country = models.Country(
-            population=0
-        )
+        country = models.Country(population=0)
         country.save()
         city = models.City(
             country=country,
@@ -112,9 +104,7 @@ class AlternativeNameTestCase(SlugModelTest, TestCase):
 class PostalCodeTestCase(SlugModelTest, TestCase):
 
     def instantiate(self):
-        country = models.Country(
-            population=0
-        )
+        country = models.Country(population=0)
         country.save()
         return models.PostalCode(
             location=Point(0, 0),

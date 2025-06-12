@@ -8,13 +8,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0007_add_currency_and_postal_code_fields_to_country_model'),
+        ("cities", "0007_add_currency_and_postal_code_fields_to_country_model"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='district',
-            name='code',
-            field=models.CharField(blank=True, db_index=True, max_length=200, null=True),
+            model_name="district",
+            name="code",
+            field=models.CharField(
+                blank=True, db_index=True, max_length=200, null=True
+            ),
         ),
     ]
