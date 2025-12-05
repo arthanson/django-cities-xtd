@@ -11,6 +11,9 @@ from tqdm import tqdm
 from ..models import District, Region, Subregion
 from .parser import Parser
 
+# Database iterator chunk size for memory-efficient querying
+DB_ITERATOR_CHUNK_SIZE = 1000
+
 # Load swappable models
 Continent = load_model("cities", "Continent")
 Country = load_model("cities", "Country")
@@ -107,7 +110,7 @@ class IndexBuilder:
         cities_count = cities_qs.count()
 
         for obj in tqdm(
-            cities_qs.iterator(chunk_size=1000),
+            cities_qs.iterator(chunk_size=DB_ITERATOR_CHUNK_SIZE),
             disable=quiet,
             total=cities_count,
             desc="Building city index",
@@ -173,7 +176,7 @@ class IndexBuilder:
 
             total_count = qs.count()
             for obj in tqdm(
-                qs.iterator(chunk_size=1000),
+                qs.iterator(chunk_size=DB_ITERATOR_CHUNK_SIZE),
                 disable=quiet,
                 total=total_count,
                 desc="Building geo index for {}".format(plural_type_name.lower()),

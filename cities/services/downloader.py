@@ -10,6 +10,9 @@ from ..exceptions import DownloadError
 
 LOGGER_NAME = os.environ.get("TRAVIS_LOGGER_NAME", "cities")
 
+# Download chunk size for streaming (8KB chunks)
+DOWNLOAD_CHUNK_SIZE = 8192
+
 
 class Downloader:
     """Handles downloading and caching of GeoNames data files"""
@@ -97,13 +100,12 @@ class Downloader:
         # Stream file to disk with size checking
         # This prevents memory exhaustion and DoS attacks
         self.logger.debug("Saving: %s", filepath)
-        chunk_size = 8192  # 8KB chunks
         downloaded_size = 0
         max_size = settings.max_download_size
 
         with io.open(filepath, "wb") as f:
             while True:
-                chunk = web_file.read(chunk_size)
+                chunk = web_file.read(DOWNLOAD_CHUNK_SIZE)
                 if not chunk:
                     break
 

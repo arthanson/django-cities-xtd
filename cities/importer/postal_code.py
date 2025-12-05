@@ -10,6 +10,9 @@ from ..exceptions import ValidationError
 from ..models import District, PostalCode, Region, Subregion
 from .base import BaseImporter
 
+# Maximum place name length (matches model field max_length)
+PLACE_NAME_MAX_LENGTH = 200
+
 
 class PostalCodeImporter(BaseImporter):
     """Imports postal code data from GeoNames"""
@@ -77,8 +80,8 @@ class PostalCodeImporter(BaseImporter):
 
         # Warn about long names
         place_name = item.get("placeName", "")
-        if len(place_name) >= 200:
-            self.logger.warning("Postal code name has more than 200 characters: %s", item)
+        if len(place_name) >= PLACE_NAME_MAX_LENGTH:
+            self.logger.warning("Postal code name exceeds %d characters: %s", PLACE_NAME_MAX_LENGTH, item)
 
         return {
             "country": country,

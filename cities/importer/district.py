@@ -18,6 +18,12 @@ except ImportError:
 
 City = load_model("cities", "City")
 
+# District city search constants
+# These could be made configurable via settings if needed
+DISTRICT_CITY_MIN_POPULATION = 100000  # Minimum city population for nearest city search
+DISTRICT_DISTANCE_SEARCH_KM = 1000  # Search radius in kilometers for distance queries
+DISTRICT_FALLBACK_SEARCH_DEGREES = 2  # Search radius in degrees for fallback non-distance queries
+
 
 class DistrictImporter(BaseImporter):
     """Imports district data from GeoNames"""
@@ -100,8 +106,6 @@ class DistrictImporter(BaseImporter):
             )
 
         # Fallback: Find nearest city using distance query
-        city_pop_min = 100000
-
         # Try native distance query
         if Distance:
             try:
@@ -109,7 +113,7 @@ class DistrictImporter(BaseImporter):
                     City.objects.filter(
                         location__distance_lte=(
                             defaults["location"],
-                            D(km=1000),
+                            D(km=DISTRICT_DISTANCE_SEARCH_KM),
                         )
                     )
                     .annotate(distance=Distance("location", defaults["location"]))
@@ -124,21 +128,23 @@ class DistrictImporter(BaseImporter):
         # Fallback: Degree-based search for databases without distance support
         self.logger.warning(
             "District: %s: DB backend does not support native '.distance(...)' query "
-            "falling back to two degree search",
+            "falling back to %d degree search",
             name,
+            DISTRICT_FALLBACK_SEARCH_DEGREES,
         )
-        search_deg = 2
         min_dist = float("inf")
         city = None
 
         bounds = Envelope(
-            defaults["location"].x - search_deg,
-            defaults["location"].y - search_deg,
-            defaults["location"].x + search_deg,
-            defaults["location"].y + search_deg,
+            defaults["location"].x - DISTRICT_FALLBACK_SEARCH_DEGREES,
+            defaults["location"].y - DISTRICT_FALLBACK_SEARCH_DEGREES,
+            defaults["location"].x + DISTRICT_FALLBACK_SEARCH_DEGREES,
+            defaults["location"].y + DISTRICT_FALLBACK_SEARCH_DEGREES,
         )
 
-        for e in City.objects.filter(population__gt=city_pop_min).filter(location__intersects=bounds.wkt):
+        for e in City.objects.filter(population__gt=DISTRICT_CITY_MIN_POPULATION).filter(
+            location__intersects=bounds.wkt
+        ):
             dist = geo_distance(defaults["location"], e.location)
             if dist < min_dist:
                 min_dist = dist
