@@ -202,7 +202,7 @@ class Subregion(Place, SlugModel):
         return ".".join([self.parent.parent.code, self.parent.code, self.code])
 
     def slugify(self):
-        return str("{}-{}").format(str(self.id), str(self.name))
+        return "{}-{}".format(self.id, str(self.name))
 
 
 class BaseCity(Place, SlugModel):
