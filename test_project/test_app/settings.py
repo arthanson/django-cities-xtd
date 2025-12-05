@@ -57,7 +57,7 @@ INSTALLED_APPS = (
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "cities",
+    "cities.apps.CitiesConfig",
     "model_utils",
     "test_app",
 )
@@ -90,6 +90,10 @@ DATABASES = {
         "PORT": int(os.environ.get("POSTGRES_PORT", "5432")),
     }
 }
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
