@@ -1,5 +1,10 @@
 # Changelog #
 
+## v0.7.0 ##
+
+- Added missing migration for Django 3.2 (for BigAutoField)
+- Removed support for Django 1.x, 2.x and very old versions of Python
+
 ## v0.6.2 ##
 
 - Fix Django missing migration, thanks @RafaPinzon93
