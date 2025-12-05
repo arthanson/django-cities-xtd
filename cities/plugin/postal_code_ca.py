@@ -20,4 +20,15 @@ class Plugin:
         country_code = item["countryCode"]
         if country_code != "CA":
             return
-        item["admin1Code"] = code_map[item["admin1Code"]]
+
+        admin_code = item.get("admin1Code")
+        if admin_code in code_map:
+            item["admin1Code"] = code_map[admin_code]
+        elif admin_code:
+            parser.logger.warning(
+                "Unknown Canadian province/territory code '%s' for postal code %s",
+                admin_code,
+                item.get("postalCode", "unknown"),
+            )
+            # Keep the original code if not in map
+            item["admin1Code"] = admin_code
