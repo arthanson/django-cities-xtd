@@ -68,7 +68,8 @@ class Downloader:
 
         for url in urls:
             try:
-                web_file = urlopen(url)
+                # Add timeout to prevent indefinite hangs
+                web_file = urlopen(url, timeout=settings.file_download_timeout)
 
                 # Check content type
                 if "html" in web_file.headers.get("Content-Type", ""):
@@ -85,7 +86,7 @@ class Downloader:
         return None
 
     def _save_file(self, filename, web_file):
-        """Save downloaded file to disk"""
+        """Save downloaded file to disk with streaming and size limits"""
         filepath = os.path.join(self.data_dir, filename)
 
         # Create directory if needed
@@ -93,7 +94,30 @@ class Downloader:
             os.makedirs(self.data_dir)
             self.logger.debug("Created directory: %s", self.data_dir)
 
-        # Save file
+        # Stream file to disk with size checking
+        # This prevents memory exhaustion and DoS attacks
         self.logger.debug("Saving: %s", filepath)
+        chunk_size = 8192  # 8KB chunks
+        downloaded_size = 0
+        max_size = settings.max_download_size
+
         with io.open(filepath, "wb") as f:
-            f.write(web_file.read())
+            while True:
+                chunk = web_file.read(chunk_size)
+                if not chunk:
+                    break
+
+                downloaded_size += len(chunk)
+                if downloaded_size > max_size:
+                    # Remove partial file
+                    f.close()
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                    raise DownloadError(
+                        f"File {filename} exceeds maximum download size of {max_size} bytes "
+                        f"({max_size / (1024**3):.1f}GB). Downloaded {downloaded_size} bytes before stopping."
+                    )
+
+                f.write(chunk)
+
+        self.logger.debug("Saved %d bytes to %s", downloaded_size, filepath)

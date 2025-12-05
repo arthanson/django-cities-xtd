@@ -696,6 +696,19 @@ def create_settings():
     if hasattr(django_settings, "CITIES_DATA_DIR"):
         res.data_dir = django_settings.CITIES_DATA_DIR
 
+    # File download timeout in seconds (default: 30)
+    if hasattr(django_settings, "CITIES_FILE_DOWNLOAD_TIMEOUT"):
+        res.file_download_timeout = django_settings.CITIES_FILE_DOWNLOAD_TIMEOUT
+    else:
+        res.file_download_timeout = 30
+
+    # Maximum download size in bytes (default: 2GB)
+    # Protects against memory exhaustion and DoS attacks
+    if hasattr(django_settings, "CITIES_MAX_DOWNLOAD_SIZE"):
+        res.max_download_size = django_settings.CITIES_MAX_DOWNLOAD_SIZE
+    else:
+        res.max_download_size = 2 * 1024 * 1024 * 1024  # 2GB
+
     if hasattr(django_settings, "CITIES_POSTAL_CODES"):
         res.postal_codes = set([e.upper() for e in django_settings.CITIES_POSTAL_CODES])
     else:
