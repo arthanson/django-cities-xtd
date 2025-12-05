@@ -24,14 +24,19 @@ __all__ = [
     "SKIP_CITIES_WITH_EMPTY_REGIONS",
     "SLUGIFY_FUNCTION",
     "VALIDATE_POSTAL_CODES",
+    "URL_BASES",
 ]
 
-url_bases = {
+# Default GeoNames download URLs
+# Can be overridden with CITIES_URL_BASES setting
+_URL_BASES = {
     "geonames": {
         "dump": "http://download.geonames.org/export/dump/",
         "zip": "http://download.geonames.org/export/zip/",
     },
 }
+
+url_bases = _URL_BASES  # For backward compatibility
 
 files = {
     "country": {
@@ -86,6 +91,9 @@ files = {
         ],
     },
     "city": {
+        # cities5000.zip = cities with population > 5000
+        # Other options: cities1000.zip, cities15000.zip, allCities.zip
+        # Can be overridden with CITIES_FILES = {"city": {"filename": "cities1000.zip"}}
         "filename": "cities5000.zip",
         "urls": [
             url_bases["geonames"]["dump"] + "{filename}",
@@ -746,4 +754,10 @@ SLUGIFY_FUNCTION = getattr(import_module(module_name), function_name)
 # Users who want better postal codes can flip this on (developers of
 # django-cities itself probably will), but most probably won't want to
 VALIDATE_POSTAL_CODES = getattr(django_settings, "CITIES_VALIDATE_POSTAL_CODES", False)
+
+# Allow users to override GeoNames download URLs (e.g., for mirrors or custom sources)
+URL_BASES = getattr(django_settings, "CITIES_URL_BASES", _URL_BASES)
+# Update url_bases for backward compatibility
+url_bases = URL_BASES
+
 DJANGO_VERSION = float(".".join(map(str, django.VERSION[:2])))

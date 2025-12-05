@@ -12,6 +12,9 @@ from model_utils import Choices
 from .conf import ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION
 from .managers import AlternativeNameManager
 
+# Constants
+INVALID_SLUG_LENGTH = 20  # Length of random string for invalid slugs
+
 __all__ = [
     "Point",
     "Continent",
@@ -52,7 +55,9 @@ class SlugModel(models.Model):
             with transaction.atomic():
                 # We first give a randomized slug with a prefix just in case
                 # users need to find invalid slugs
-                self.slug = "invalid-{}".format("".join(choice(ascii_uppercase + digits) for i in range(20)))
+                self.slug = "invalid-{}".format(
+                    "".join(choice(ascii_uppercase + digits) for i in range(INVALID_SLUG_LENGTH))
+                )
                 super(SlugModel, self).save(*args, **kwargs)
                 self.slug = slugify_func(self, self.slugify())
 
