@@ -14,62 +14,59 @@ http://download.geonames.org/export/zip/
 - Postal Codes:         allCountries.zip
 """
 
-import io
-import json
 import logging
 import os
-import re
-import zipfile
-from itertools import chain
-from urllib.request import urlopen
 
-from django.contrib.gis.gdal.envelope import Envelope
-from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import D
+from django.core.management.base import BaseCommand
+from django.db import transaction
 from swapper import load_model
 from tqdm import tqdm
 
-try:
-    from django.contrib.gis.db.models.functions import Distance
-except ImportError:
-    pass
-from django.core.management.base import BaseCommand
-from django.db import transaction
-from django.db.models import CharField, ForeignKey, Q
-
-from ...conf import (
-    CURRENCY_SYMBOLS,
-    INCLUDE_AIRPORT_CODES,
-    INCLUDE_NUMERIC_ALTERNATIVE_NAMES,
-    NO_LONGER_EXISTENT_COUNTRY_CODES,
-    SKIP_CITIES_WITH_EMPTY_REGIONS,
-    VALIDATE_POSTAL_CODES,
-    HookException,
-    city_types,
-    district_types,
-    import_opts,
-    import_opts_all,
-    settings,
+from ...conf import HookException, import_opts, import_opts_all, settings
+from ...importer import (
+    AlternativeNameImporter,
+    CityImporter,
+    CountryImporter,
+    DistrictImporter,
+    PostalCodeImporter,
+    RegionImporter,
+    SubregionImporter,
 )
-from ...models import AlternativeName, District, PostalCode, Region, Subregion
-from ...util import geo_distance
+from ...models import District, PostalCode, Region, Subregion
 
 # Load swappable models
 Continent = load_model("cities", "Continent")
 Country = load_model("cities", "Country")
 City = load_model("cities", "City")
 
-
 # Only log errors during Travis tests
 LOGGER_NAME = os.environ.get("TRAVIS_LOGGER_NAME", "cities")
 
 
 class Command(BaseCommand):
+    """
+    Django management command for importing GeoNames data
+
+    Delegates to specialized importer classes for each entity type.
+    """
+
+    # Map import types to importer classes
+    IMPORTERS = {
+        "country": CountryImporter,
+        "region": RegionImporter,
+        "subregion": SubregionImporter,
+        "city": CityImporter,
+        "district": DistrictImporter,
+        "postal_code": PostalCodeImporter,
+        "alt_name": AlternativeNameImporter,
+    }
+
     if hasattr(settings, "data_dir"):
         data_dir = settings.data_dir
     else:
         app_dir = os.path.normpath(os.path.dirname(os.path.realpath(__file__)) + "/../..")
         data_dir = os.path.join(app_dir, "data")
+
     logger = logging.getLogger(LOGGER_NAME)
 
     def add_arguments(self, parser):
@@ -85,7 +82,7 @@ class Command(BaseCommand):
             metavar="DATA_TYPES",
             default="all",
             dest="import",
-            help="Selectively import data. Comma separated list of data " "types: " + str(import_opts).replace("'", ""),
+            help="Selectively import data. Comma separated list of data types: " + str(import_opts).replace("'", ""),
         )
         parser.add_argument(
             "--flush",
@@ -104,30 +101,60 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        self.download_cache = {}
+        """Main entry point for command"""
         self.options = options
 
-        self.force = self.options["force"]
-
+        # Handle flush operations
         self.flushes = [e for e in self.options.get("flush", "").split(",") if e]
         if "all" in self.flushes:
             self.flushes = import_opts_all
-        for flush in self.flushes:
-            func = getattr(self, "flush_" + flush)
-            func()
 
+        for flush in self.flushes:
+            flush_func = getattr(self, "flush_" + flush)
+            flush_func()
+
+        # Handle import operations
         self.imports = [e for e in self.options.get("import", "").split(",") if e]
         if "all" in self.imports:
             self.imports = import_opts_all
+
+        # Don't import if we're only flushing
         if self.flushes:
             self.imports = []
-        for import_ in self.imports:
-            func = getattr(self, "import_" + import_)
-            func()
+
+        for import_type in self.imports:
+            self._run_importer(import_type)
+
+    def _run_importer(self, import_type):
+        """
+        Run the appropriate importer for the given import type
+
+        Args:
+            import_type: Type of data to import (e.g., 'country', 'city')
+        """
+        try:
+            importer_class = self.IMPORTERS[import_type]
+        except KeyError:
+            self.logger.error("Unknown import type: %s", import_type)
+            return
+
+        importer = importer_class(self, self.options)
+        importer.run()
 
     def call_hook(self, hook, *args, **kwargs):
+        """
+        Call plugin hooks (for backward compatibility)
+
+        Args:
+            hook: Hook name
+            *args: Arguments to pass to hook
+            **kwargs: Keyword arguments to pass to hook
+
+        Returns:
+            bool: True if should continue, False if should skip
+        """
         if hasattr(settings, "plugins"):
-            for plugin in settings.plugins[hook]:
+            for plugin in settings.plugins.get(hook, []):
                 try:
                     func = getattr(plugin, hook)
                     func(self, *args, **kwargs)
@@ -138,1070 +165,40 @@ class Command(BaseCommand):
                     return False
         return True
 
-    def download(self, filekey):
-        if "filename" in settings.files[filekey]:
-            filenames = [settings.files[filekey]["filename"]]
-        else:
-            filenames = settings.files[filekey]["filenames"]
-
-        for filename in filenames:
-            web_file = None
-            urls = [e.format(filename=filename) for e in settings.files[filekey]["urls"]]
-            for url in urls:
-                try:
-                    web_file = urlopen(url)
-                    if "html" in web_file.headers["Content-Type"]:
-                        # TODO: Make this a subclass
-                        raise Exception(
-                            "Content type of downloaded file was {}".format(web_file.headers["Content-Type"])
-                        )
-                    self.logger.debug("Downloaded: {}".format(url))
-                    break
-                except Exception:
-                    web_file = None
-                    continue
-            else:
-                self.logger.error("Web file not found: %s. Tried URLs:\n%s", filename, "\n".join(urls))
-
-            if web_file is not None:
-                self.logger.debug("Saving: {}/{}".format(self.data_dir, filename))
-                if not os.path.exists(self.data_dir):
-                    os.makedirs(self.data_dir)
-                file = io.open(os.path.join(self.data_dir, filename), "wb")
-                file.write(web_file.read())
-                file.close()
-            elif not os.path.exists(os.path.join(self.data_dir, filename)):
-                raise Exception("File not found and download failed: {} [{}]".format(filename, urls))
-
-    def get_data(self, filekey):
-        if "filename" in settings.files[filekey]:
-            filenames = [settings.files[filekey]["filename"]]
-        else:
-            filenames = settings.files[filekey]["filenames"]
-
-        for filename in filenames:
-            name, ext = filename.rsplit(".", 1)
-            if ext == "zip":
-                filepath = os.path.join(self.data_dir, filename)
-                zip_member = zipfile.ZipFile(filepath).open(name + ".txt", "r")
-                file_obj = io.TextIOWrapper(zip_member, encoding="utf-8")
-            else:
-                file_obj = io.open(os.path.join(self.data_dir, filename), "r", encoding="utf-8")
-
-            for row in file_obj:
-                if not row.startswith("#"):
-                    yield dict(
-                        list(
-                            zip(
-                                settings.files[filekey]["fields"],
-                                row.rstrip("\n").split("\t"),
-                            )
-                        )
-                    )
-
-    def parse(self, data):
-        for line in data:
-            if len(line) < 1 or line[0] == "#":
-                continue
-            items = [e.strip() for e in line.split("\t")]
-            yield items
-
-    def import_country(self):
-        self.download("country")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("country"))
-        total = len(data) - len(NO_LONGER_EXISTENT_COUNTRY_CODES)
-
-        neighbours = {}
-        countries = {}
-
-        continents = {c.code: c for c in Continent.objects.all()}
-
-        # If the continent attribute on Country is a ForeignKey, import
-        # continents as ForeignKeys to the Continent models, otherwise assume
-        # they are still the CharField(max_length=2) and import them the old way
-        import_continents_as_fks = type(Country._meta.get_field("continent")) is ForeignKey
-
-        for item in tqdm(
-            [d for d in data if d["code"] not in NO_LONGER_EXISTENT_COUNTRY_CODES],
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing countries",
-        ):
-            if not self.call_hook("country_pre", item):
-                continue
-
-            try:
-                country_id = int(item["geonameid"])
-            except KeyError:
-                self.logger.warning("Country has no geonameid: {} -- skipping".format(item))
-                continue
-            except ValueError:
-                self.logger.warning("Country has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
-                continue
-
-            defaults = {
-                "name": item["name"],
-                "code": item["code"],
-                "code3": item["code3"],
-                "population": item["population"],
-                "continent": (continents[item["continent"]] if import_continents_as_fks else item["continent"]),
-                "tld": item["tld"][1:],  # strip the leading .
-                "phone": item["phone"],
-                "currency": item["currencyCode"],
-                "currency_name": item["currencyName"],
-                "capital": item["capital"],
-                "area": int(float(item["area"])) if item["area"] else None,
-            }
-
-            if hasattr(Country, "language_codes"):
-                defaults["language_codes"] = item["languages"]
-            elif hasattr(Country, "languages") and type(getattr(Country, "languages")) is CharField:
-                defaults["languages"] = item["languages"]
-
-            # These fields shouldn't impact saving older models (that don't
-            # have these attributes)
-            try:
-                defaults["currency_symbol"] = CURRENCY_SYMBOLS.get(item["currencyCode"], None)
-                defaults["postal_code_format"] = item["postalCodeFormat"]
-                defaults["postal_code_regex"] = item["postalCodeRegex"]
-            except AttributeError:
-                pass
-
-            # Make importing countries idempotent
-            country, created = Country.objects.update_or_create(id=country_id, defaults=defaults)
-
-            self.logger.debug("%s country '%s'", "Added" if created else "Updated", defaults["name"])
-
-            neighbours[country] = item["neighbours"].split(",")
-            countries[country.code] = country
-
-            if not self.call_hook("country_post", country, item):
-                continue
-
-        for country, neighbour_codes in tqdm(
-            list(neighbours.items()),
-            disable=self.options.get("quiet"),
-            total=len(neighbours),
-            desc="Importing country neighbours",
-        ):
-            neighbours = [x for x in [countries.get(x) for x in neighbour_codes if x] if x]
-            country.neighbours.add(*neighbours)
-
-    def build_country_index(self):
-        if hasattr(self, "country_index"):
-            return
-
-        self.country_index = {}
-        # Fetch queryset once and calculate count efficiently
-        countries_qs = Country.objects.all()
-        total = countries_qs.count()
-        for obj in tqdm(
-            countries_qs.iterator(),
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Building country index",
-        ):
-            self.country_index[obj.code] = obj
-
-    def import_region(self):
-        self.download("region")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("region"))
-        total = len(data)
-
-        self.build_country_index()
-
-        countries_not_found = {}
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing regions",
-        ):
-            if not self.call_hook("region_pre", item):
-                continue
-
-            try:
-                region_id = int(item["geonameid"])
-            except KeyError:
-                self.logger.warning("Region has no geonameid: {} -- skipping".format(item))
-                continue
-            except ValueError:
-                self.logger.warning("Region has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
-                continue
-
-            country_code, region_code = item["code"].split(".")
-
-            defaults = {
-                "name": item["name"],
-                "name_std": item["asciiName"],
-                "code": region_code,
-            }
-
-            try:
-                defaults["country"] = self.country_index[country_code]
-            except KeyError:
-                countries_not_found.setdefault(country_code, []).append(defaults["name"])
-                self.logger.warning(
-                    "Region: %s: Cannot find country: %s -- skipping",
-                    defaults["name"],
-                    country_code,
-                )
-                continue
-
-            region, created = Region.objects.update_or_create(id=region_id, defaults=defaults)
-
-            if not self.call_hook("region_post", region, item):
-                continue
-
-            self.logger.debug(
-                "%s region: %s, %s",
-                "Added" if created else "Updated",
-                item["code"],
-                region,
-            )
-
-        if countries_not_found:
-            countries_not_found_file = os.path.join(self.data_dir, "countries_not_found.json")
-            try:
-                with open(countries_not_found_file, "w+") as fp:
-                    json.dump(countries_not_found, fp)
-            except Exception as e:
-                self.logger.warning("Unable to write log file '{}': {}".format(countries_not_found_file, e))
-
-    def build_region_index(self):
-        if hasattr(self, "region_index"):
-            return
-
-        self.region_index = {}
-        # Fetch querysets once and calculate total count efficiently
-        regions_qs = Region.objects.all().select_related("country")
-        subregions_qs = Subregion.objects.all().select_related("region__country")
-        total = regions_qs.count() + subregions_qs.count()
-
-        for obj in tqdm(
-            chain(
-                regions_qs.iterator(),
-                subregions_qs.iterator(),
-            ),
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Building region index",
-        ):
-            self.region_index[obj.full_code()] = obj
-
-    def import_subregion(self):
-        self.download("subregion")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("subregion"))
-        total = len(data)
-
-        self.build_country_index()
-        self.build_region_index()
-
-        regions_not_found = {}
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing subregions",
-        ):
-            if not self.call_hook("subregion_pre", item):
-                continue
-
-            try:
-                subregion_id = int(item["geonameid"])
-            except KeyError:
-                self.logger.warning("Subregion has no geonameid: {} -- skipping".format(item))
-                continue
-            except ValueError:
-                self.logger.warning("Subregion has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
-                continue
-
-            country_code, region_code, subregion_code = item["code"].split(".")
-
-            defaults = {
-                "name": item["name"],
-                "name_std": item["asciiName"],
-                "code": subregion_code,
-            }
-
-            try:
-                defaults["region"] = self.region_index[country_code + "." + region_code]
-            except KeyError:
-                regions_not_found.setdefault(country_code, {})
-                regions_not_found[country_code].setdefault(region_code, []).append(defaults["name"])
-                self.logger.debug(
-                    "Subregion: %s %s: Cannot find region",
-                    item["code"],
-                    defaults["name"],
-                )
-                continue
-
-            subregion, created = Subregion.objects.update_or_create(id=subregion_id, defaults=defaults)
-
-            if not self.call_hook("subregion_post", subregion, item):
-                continue
-
-            self.logger.debug(
-                "%s subregion: %s, %s",
-                "Added" if created else "Updated",
-                item["code"],
-                subregion,
-            )
-
-        if regions_not_found:
-            regions_not_found_file = os.path.join(self.data_dir, "regions_not_found.json")
-            try:
-                with open(regions_not_found_file, "w+") as fp:
-                    json.dump(regions_not_found, fp)
-            except Exception as e:
-                self.logger.warning("Unable to write log file '{}': {}".format(regions_not_found_file, e))
-
-        del self.region_index
-
-    def import_city(self):
-        self.download("city")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("city"))
-        total = len(data)
-
-        self.build_country_index()
-        self.build_region_index()
-
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing cities",
-        ):
-            if not self.call_hook("city_pre", item):
-                continue
-
-            if item["featureCode"] not in city_types:
-                continue
-
-            try:
-                city_id = int(item["geonameid"])
-            except KeyError:
-                self.logger.warning("City has no geonameid: {} -- skipping".format(item))
-                continue
-            except ValueError:
-                self.logger.warning("City has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
-                continue
-
-            defaults = {
-                "name": item["name"],
-                "kind": item["featureCode"],
-                "name_std": item["asciiName"],
-                "location": Point(float(item["longitude"]), float(item["latitude"])),
-                "population": int(item["population"]),
-                "timezone": item["timezone"],
-            }
-
-            try:
-                defaults["elevation"] = int(item["elevation"])
-            except (KeyError, ValueError):
-                pass
-
-            country_code = item["countryCode"]
-            try:
-                country = self.country_index[country_code]
-                defaults["country"] = country
-            except KeyError:
-                self.logger.warning(
-                    "City: %s: Cannot find country: '%s' -- skipping",
-                    item["name"],
-                    country_code,
-                )
-                continue
-
-            region_code = item["admin1Code"]
-            try:
-                region_key = country_code + "." + region_code
-                region = self.region_index[region_key]
-                defaults["region"] = region
-            except KeyError:
-                self.logger.debug(
-                    "SKIP_CITIES_WITH_EMPTY_REGIONS: %s",
-                    str(SKIP_CITIES_WITH_EMPTY_REGIONS),
-                )
-                if SKIP_CITIES_WITH_EMPTY_REGIONS:
-                    self.logger.debug(
-                        "%s: %s: Cannot find region: '%s' -- skipping",
-                        country_code,
-                        item["name"],
-                        region_code,
-                    )
-                    continue
-                else:
-                    defaults["region"] = None
-
-            subregion_code = item["admin2Code"]
-            try:
-                subregion = self.region_index[country_code + "." + region_code + "." + subregion_code]
-                defaults["subregion"] = subregion
-            except KeyError:
-                try:
-                    with transaction.atomic():
-                        defaults["subregion"] = Subregion.objects.get(
-                            Q(name=subregion_code) | Q(name=subregion_code.replace(" (undefined)", "")),
-                            region=defaults["region"],
-                        )
-                except Subregion.DoesNotExist:
-                    try:
-                        with transaction.atomic():
-                            defaults["subregion"] = Subregion.objects.get(
-                                Q(name_std=subregion_code) | Q(name_std=subregion_code.replace(" (undefined)", "")),
-                                region=defaults["region"],
-                            )
-                    except Subregion.DoesNotExist:
-                        if subregion_code:
-                            self.logger.debug(
-                                "%s: %s: Cannot find subregion: '%s'",
-                                country_code,
-                                item["name"],
-                                subregion_code,
-                            )
-                        defaults["subregion"] = None
-
-            city, created = City.objects.update_or_create(id=city_id, defaults=defaults)
-
-            if not self.call_hook("city_post", city, item):
-                continue
-
-            self.logger.debug("%s city: %s", "Added" if created else "Updated", city)
-
-    def build_hierarchy(self):
-        if hasattr(self, "hierarchy") and self.hierarchy:
-            return
-
-        self.download("hierarchy")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("hierarchy"))
-        total = len(data)
-
-        self.hierarchy = {}
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Building hierarchy index",
-        ):
-            parent_id = int(item["parent"])
-            child_id = int(item["child"])
-            self.hierarchy[child_id] = parent_id
-
-    def import_district(self):
-        self.download("city")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("city"))
-        total = len(data)
-
-        self.build_country_index()
-        self.build_region_index()
-        self.build_hierarchy()
-
-        city_index = {}
-        # Fetch queryset once and calculate count efficiently
-        cities_qs = City.objects.all()
-        cities_count = cities_qs.count()
-        for obj in tqdm(
-            cities_qs.iterator(chunk_size=1000),
-            disable=self.options.get("quiet"),
-            total=cities_count,
-            desc="Building city index",
-        ):
-            city_index[obj.id] = obj
-
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing districts",
-        ):
-            if not self.call_hook("district_pre", item):
-                continue
-
-            _type = item["featureCode"]
-            if _type not in district_types:
-                continue
-
-            defaults = {
-                "name": item["name"],
-                "name_std": item["asciiName"],
-                "location": Point(float(item["longitude"]), float(item["latitude"])),
-                "population": int(item["population"]),
-            }
-
-            if hasattr(District, "code"):
-                defaults["code"] = (item["admin3Code"],)
-
-            geonameid = int(item["geonameid"])
-
-            # Find city
-            city = None
-            try:
-                city = city_index[self.hierarchy[geonameid]]
-            except KeyError:
-                self.logger.debug(
-                    "District: %d %s: Cannot find city in hierarchy, using nearest",
-                    geonameid,
-                    defaults["name"],
-                )
-                city_pop_min = 100000
-                # we are going to try to find closet city using native
-                # database .distance(...) query but if that fails then
-                # we fall back to degree search, MYSQL has no support
-                # and Spatialite with SRID 4236.
-                try:
-                    city = (
-                        City.objects.filter(
-                            location__distance_lte=(
-                                defaults["location"],
-                                D(km=1000),
-                            )
-                        )
-                        .annotate(distance=Distance("location", defaults["location"]))
-                        .order_by("distance")
-                        .first()
-                    )
-                except City.DoesNotExist:
-                    self.logger.warning(
-                        "District: %s: DB backend does not support native '.distance(...)' query "
-                        "falling back to two degree search",
-                        defaults["name"],
-                    )
-                    search_deg = 2
-                    min_dist = float("inf")
-                    bounds = Envelope(
-                        defaults["location"].x - search_deg,
-                        defaults["location"].y - search_deg,
-                        defaults["location"].x + search_deg,
-                        defaults["location"].y + search_deg,
-                    )
-                    for e in City.objects.filter(population__gt=city_pop_min).filter(location__intersects=bounds.wkt):
-                        dist = geo_distance(defaults["location"], e.location)
-                        if dist < min_dist:
-                            min_dist = dist
-                            city = e
-            else:
-                self.logger.debug("Found city in hierarchy: %s [%d]", city.name, geonameid)
-
-            if not city:
-                self.logger.warning("District: %s: Cannot find city -- skipping", defaults["name"])
-                continue
-
-            defaults["city"] = city
-
-            try:
-                with transaction.atomic():
-                    district = District.objects.get(city=defaults["city"], name=defaults["name"])
-            except District.DoesNotExist:
-                # If the district doesn't exist, create it with the geonameid
-                # as its id
-                district, created = District.objects.update_or_create(id=item["geonameid"], defaults=defaults)
-            else:
-                # Since the district already exists, but doesn't have its
-                # geonameid as its id, we need to update all of its attributes
-                # *except* for its id
-                for key, value in defaults.items():
-                    setattr(district, key, value)
-                district.save()
-                created = False
-
-            if not self.call_hook("district_post", district, item):
-                continue
-
-            self.logger.debug("%s district: %s", "Added" if created else "Updated", district)
-
-    def import_alt_name(self):
-        self.download("alt_name")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("alt_name"))
-        total = len(data)
-
-        geo_index = {}
-        for type_ in (Country, Region, Subregion, City, District):
-            plural_type_name = (
-                "{}s".format(type_.__name__) if type_.__name__[-1] != "y" else "{}ies".format(type_.__name__[:-1])
-            )
-            # Fetch queryset once and calculate count efficiently
-            # Use select_related to prefetch foreign keys that will be accessed
-            qs = type_.objects.all()
-            if type_ == Region:
-                qs = qs.select_related("country")
-            elif type_ == Subregion:
-                qs = qs.select_related("region__country")
-            elif type_ == City:
-                qs = qs.select_related("country", "region", "subregion")
-            elif type_ == District:
-                qs = qs.select_related("city__country", "city__region", "city__subregion")
-
-            total_count = qs.count()
-            for obj in tqdm(
-                qs.iterator(chunk_size=1000),
-                disable=self.options.get("quiet"),
-                total=total_count,
-                desc="Building geo index for {}".format(plural_type_name.lower()),
-            ):
-                geo_index[obj.id] = {
-                    "type": type_,
-                    "object": obj,
-                }
-
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing data for alternative names",
-        ):
-            if not self.call_hook("alt_name_pre", item):
-                continue
-
-            # Only get names for languages in use
-            locale = item["language"]
-            if not locale:
-                locale = "und"
-            if locale not in settings.locales and "all" not in settings.locales:
-                self.logger.debug(
-                    "Alternative name with language [{}]: {} " "({}) -- skipping".format(
-                        item["language"], item["name"], item["nameid"]
-                    )
-                )
-                continue
-
-            # Check if known geo id
-            geo_id = int(item["geonameid"])
-            try:
-                geo_info = geo_index[geo_id]
-            except KeyError:
-                continue
-
-            try:
-                alt_id = int(item["nameid"])
-            except KeyError:
-                self.logger.warning("Alternative name has no nameid: {} -- skipping".format(item))
-                continue
-
-            try:
-                alt = AlternativeName.objects.get(id=alt_id)
-            except AlternativeName.DoesNotExist:
-                alt = AlternativeName(id=alt_id)
-
-            alt.name = item["name"]
-            alt.is_preferred = bool(item["isPreferred"])
-            alt.is_short = bool(item["isShort"])
-            try:
-                alt.language_code = locale
-            except AttributeError:
-                alt.language = locale
-
-            try:
-                int(item["name"])
-            except ValueError:
-                pass
-            else:
-                if not INCLUDE_NUMERIC_ALTERNATIVE_NAMES:
-                    self.logger.debug(
-                        "Trying to add a numeric alternative name to {} ({}): {} -- skipping".format(
-                            geo_info["object"].name,
-                            geo_info["type"].__name__,
-                            item["name"],
-                        )
-                    )
-                    continue
-            alt.is_historic = (
-                True if ((item["isHistoric"] and item["isHistoric"] != "\n") or locale == "fr_1793") else False
-            )
-
-            if locale == "post":
-                try:
-                    if geo_index[item["geonameid"]]["type"] == Region:
-                        region = geo_index[item["geonameid"]]["object"]
-                        PostalCode.objects.get_or_create(
-                            code=item["name"],
-                            country=region.country,
-                            region=region,
-                            region_name=region.name,
-                        )
-                    elif geo_index[item["geonameid"]]["type"] == Subregion:
-                        subregion = geo_index[item["geonameid"]]["object"]
-                        PostalCode.objects.get_or_create(
-                            code=item["name"],
-                            country=subregion.region.country,
-                            region=subregion.region,
-                            subregion=subregion,
-                            region_name=subregion.region.name,
-                            subregion_name=subregion.name,
-                        )
-                    elif geo_index[item["geonameid"]]["type"] == City:
-                        city = geo_index[item["geonameid"]]["object"]
-                        PostalCode.objects.get_or_create(
-                            code=item["name"],
-                            country=city.country,
-                            region=city.region,
-                            subregion=city.subregion,
-                            region_name=city.region.name,
-                            subregion_name=city.subregion.name,
-                        )
-                except KeyError:
-                    pass
-
-                continue
-
-            if hasattr(alt, "kind"):
-                if locale in ("abbr", "link", "name") or INCLUDE_AIRPORT_CODES and locale in ("iana", "icao", "faac"):
-                    alt.kind = locale
-                elif locale not in settings.locales and "all" not in settings.locales:
-                    self.logger.debug("Unknown alternative name type: {} -- skipping".format(locale))
-                    continue
-
-            alt.save()
-            geo_info["object"].alt_names.add(alt)
-
-            if not self.call_hook("alt_name_post", alt, item):
-                continue
-
-            self.logger.debug("Added alt name: %s, %s", locale, alt)
-
-    def build_postal_code_regex_index(self):
-        if hasattr(self, "postal_code_regex_index") and self.postal_code_regex_index:
-            return
-
-        self.build_country_index()
-
-        self.postal_code_regex_index = {}
-        for code, country in tqdm(
-            self.country_index.items(),
-            disable=self.options.get("quiet"),
-            total=len(self.country_index),
-            desc="Building postal code regex index",
-        ):
-            try:
-                self.postal_code_regex_index[code] = re.compile(country.postal_code_regex)
-            except Exception as e:
-                self.logger.error("Couldn't compile postal code regex for {}: {}".format(country.code, e.args))
-                self.postal_code_regex_index[code] = ""
-
-    def import_postal_code(self):
-        self.download("postal_code")
-        # Load data once into memory to avoid double file parsing
-        data = list(self.get_data("postal_code"))
-        total = len(data)
-
-        self.build_country_index()
-        self.build_region_index()
-        if VALIDATE_POSTAL_CODES:
-            self.build_postal_code_regex_index()
-
-        districts_to_delete = []
-
-        num_existing_postal_codes = PostalCode.objects.count()
-        if num_existing_postal_codes == 0:
-            self.logger.debug("Zero postal codes found - using only-create " "postal code optimization")
-        for item in tqdm(
-            data,
-            disable=self.options.get("quiet"),
-            total=total,
-            desc="Importing postal codes",
-        ):
-            if not self.call_hook("postal_code_pre", item):
-                continue
-
-            country_code = item["countryCode"]
-            if country_code not in settings.postal_codes and "ALL" not in settings.postal_codes:
-                continue
-
-            try:
-                code = item["postalCode"]
-            except KeyError:
-                self.logger.warning("Postal code has no code: {} -- skipping".format(item))
-                continue
-
-            # Find country
-            try:
-                country = self.country_index[country_code]
-            except KeyError:
-                self.logger.warning(
-                    "Postal code '%s': Cannot find country: %s -- skipping",
-                    code,
-                    country_code,
-                )
-                continue
-
-            # Validate postal code against the country
-            code = item["postalCode"]
-            if VALIDATE_POSTAL_CODES and self.postal_code_regex_index[country_code].match(code) is None:
-                self.logger.warning("Postal code didn't validate: {} ({})".format(code, country_code))
-                continue
-
-            reg_name_q = Q(region_name__iexact=item["admin1Name"])
-            subreg_name_q = Q(subregion_name__iexact=item["admin2Name"])
-            dst_name_q = Q(district_name__iexact=item["admin3Name"])
-
-            if hasattr(PostalCode, "region"):
-                reg_name_q |= Q(region__code=item["admin1Code"])
-
-            if hasattr(PostalCode, "subregion"):
-                subreg_name_q |= Q(subregion__code=item["admin2Code"])
-
-            if hasattr(PostalCode, "district") and hasattr(District, "code"):
-                dst_name_q |= Q(district__code=item["admin3Code"])
-
-            try:
-                location = Point(float(item["longitude"]), float(item["latitude"]))
-            except ValueError:
-                location = None
-
-            if len(item["placeName"]) >= 200:
-                self.logger.warning("Postal code name has more than 200 characters: {}".format(item))
-
-            if num_existing_postal_codes > 0:
-                postal_code_args = (
-                    {
-                        "args": (reg_name_q, subreg_name_q, dst_name_q),
-                        "country": country,
-                        "code": code,
-                        "location": location,
-                    },
-                    {
-                        "args": (reg_name_q, subreg_name_q, dst_name_q),
-                        "country": country,
-                        "code": code,
-                    },
-                    {
-                        "args": (reg_name_q, subreg_name_q, dst_name_q),
-                        "country": country,
-                        "code": code,
-                        "name__iexact": re.sub("'", "", item["placeName"]),
-                    },
-                    {
-                        "args": tuple(),
-                        "country": country,
-                        "region__code": item["admin1Code"],
-                    },
-                    {
-                        "args": tuple(),
-                        "country": country,
-                        "code": code,
-                        "name": item["placeName"],
-                        "region__code": item["admin1Code"],
-                        "subregion__code": item["admin2Code"],
-                    },
-                    {
-                        "args": tuple(),
-                        "country": country,
-                        "code": code,
-                        "name": item["placeName"],
-                        "region__code": item["admin1Code"],
-                        "subregion__code": item["admin2Code"],
-                        "district__code": item["admin3Code"],
-                    },
-                    {
-                        "args": tuple(),
-                        "country": country,
-                        "code": code,
-                        "name": item["placeName"],
-                        "region_name": item["admin1Name"],
-                        "subregion_name": item["admin2Name"],
-                    },
-                    {
-                        "args": tuple(),
-                        "country": country,
-                        "code": code,
-                        "name": item["placeName"],
-                        "region_name": item["admin1Name"],
-                        "subregion_name": item["admin2Name"],
-                        "district_name": item["admin3Name"],
-                    },
-                )
-
-                # Try each query strategy until we find a match
-                # Optimized to use direct .get() instead of .count() + .get()
-                for args_dict in postal_code_args:
-                    try:
-                        pc = PostalCode.objects.get(
-                            *args_dict["args"],
-                            **{k: v for k, v in args_dict.items() if k != "args"},
-                        )
-                        break
-                    except PostalCode.DoesNotExist:
-                        # Try next strategy
-                        continue
-                    except PostalCode.MultipleObjectsReturned:
-                        # Log and re-raise to maintain existing behavior
-                        pcs = PostalCode.objects.filter(
-                            *args_dict["args"],
-                            **{k: v for k, v in args_dict.items() if k != "args"},
-                        )
-                        self.logger.debug("item: {}\nresults: {}".format(item, pcs))
-                        # Re-raise to maintain current error handling
-                        raise
-                else:
-                    self.logger.debug("Creating postal code: {}".format(item))
-                    pc = PostalCode(
-                        country=country,
-                        code=code,
-                        name=item["placeName"],
-                        region_name=item["admin1Name"],
-                        subregion_name=item["admin2Name"],
-                        district_name=item["admin3Name"],
-                    )
-            else:
-                self.logger.debug("Creating postal code: {}".format(item))
-                pc = PostalCode(
-                    country=country,
-                    code=code,
-                    name=item["placeName"],
-                    region_name=item["admin1Name"],
-                    subregion_name=item["admin2Name"],
-                    district_name=item["admin3Name"],
-                )
-
-            if pc.region_name != "":
-                try:
-                    with transaction.atomic():
-                        pc.region = Region.objects.get(
-                            Q(name_std__iexact=pc.region_name) | Q(name__iexact=pc.region_name),
-                            country=pc.country,
-                        )
-                except Region.DoesNotExist:
-                    pc.region = None
-            else:
-                pc.region = None
-
-            if pc.subregion_name != "":
-                try:
-                    with transaction.atomic():
-                        pc.subregion = Subregion.objects.get(
-                            Q(region__name_std__iexact=pc.region_name) | Q(region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.subregion_name) | Q(name__iexact=pc.subregion_name),
-                            region__country=pc.country,
-                        )
-                except Subregion.DoesNotExist:
-                    pc.subregion = None
-            else:
-                pc.subregion = None
-
-            if pc.district_name != "":
-                try:
-                    with transaction.atomic():
-                        pc.district = District.objects.get(
-                            Q(city__region__name_std__iexact=pc.region_name)
-                            | Q(city__region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
-                            city__country=pc.country,
-                        )
-                except District.MultipleObjectsReturned as e:
-                    self.logger.debug(
-                        "item: {}\ndistricts: {}".format(
-                            item,
-                            District.objects.filter(
-                                Q(city__region__name_std__iexact=pc.region_name)
-                                | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
-                                city__country=pc.country,
-                            ).values_list("id", flat=True),
-                        )
-                    )
-                    # If they're both part of the same city
-                    if (
-                        District.objects.filter(
-                            Q(city__region__name_std__iexact=pc.region_name)
-                            | Q(city__region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
-                            city__country=pc.country,
-                        )
-                        .values_list("city")
-                        .distinct()
-                        .count()
-                        == 1
-                    ):
-                        # Use the one with the lower ID
-                        pc.district = (
-                            District.objects.filter(
-                                Q(city__region__name_std__iexact=pc.region_name)
-                                | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
-                                city__country=pc.country,
-                            )
-                            .order_by("city__id")
-                            .first()
-                        )
-
-                        districts_to_delete.append(
-                            District.objects.filter(
-                                Q(city__region__name_std__iexact=pc.region_name)
-                                | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
-                                city__country=pc.country,
-                            )
-                            .order_by("city__id")
-                            .last()
-                            .id
-                        )
-                    else:
-                        raise e
-                except District.DoesNotExist:
-                    pc.district = None
-            else:
-                pc.district = None
-
-            if pc.district is not None:
-                pc.city = pc.district.city
-            else:
-                pc.city = None
-
-            try:
-                pc.location = Point(float(item["longitude"]), float(item["latitude"]))
-            except Exception as e:
-                self.logger.warning(
-                    "Postal code %s (%s) - invalid location ('%s', '%s'): %s",
-                    pc.code,
-                    pc.country,
-                    item["longitude"],
-                    item["latitude"],
-                    str(e),
-                )
-                pc.location = None
-
-            pc.save()
-
-            if not self.call_hook("postal_code_post", pc, item):
-                continue
-
-            self.logger.debug("Added postal code: %s, %s", pc.country, pc)
-
-        if districts_to_delete:
-            self.logger.debug("districts to delete:\n{}".format(districts_to_delete))
+    # Flush methods
 
     def flush_country(self):
+        """Delete all country data"""
         self.logger.info("Flushing country data")
         Country.objects.all().delete()
 
     def flush_region(self):
+        """Delete all region data"""
         self.logger.info("Flushing region data")
         Region.objects.all().delete()
 
     def flush_subregion(self):
+        """Delete all subregion data"""
         self.logger.info("Flushing subregion data")
         Subregion.objects.all().delete()
 
     def flush_city(self):
+        """Delete all city data"""
         self.logger.info("Flushing city data")
         City.objects.all().delete()
 
     def flush_district(self):
+        """Delete all district data"""
         self.logger.info("Flushing district data")
         District.objects.all().delete()
 
     def flush_postal_code(self):
+        """Delete all postal code data"""
         self.logger.info("Flushing postal code data")
         PostalCode.objects.all().delete()
 
     def flush_alt_name(self):
+        """Delete all alternative name data"""
         self.logger.info("Flushing alternate name data")
         for type_ in (Country, Region, Subregion, City, District, PostalCode):
             plural_type_name = type_.__name__ if type_.__name__[-1] != "y" else "{}ies".format(type_.__name__[:-1])
