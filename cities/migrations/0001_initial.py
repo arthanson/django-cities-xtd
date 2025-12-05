@@ -9,7 +9,6 @@ from cities.models import SET_NULL_OR_CASCADE
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         swapper.dependency("cities", "City"),
         swapper.dependency("cities", "Country"),
@@ -49,16 +48,12 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 (
                     "name_std",
-                    models.CharField(
-                        max_length=200, verbose_name="standard name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="standard name", db_index=True),
                 ),
                 ("location", django.contrib.gis.db.models.fields.PointField(srid=4326)),
                 ("population", models.IntegerField()),
@@ -86,9 +81,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 ("code", models.CharField(max_length=2, db_index=True)),
@@ -99,7 +92,7 @@ class Migration(migrations.Migration):
                 ("currency_name", models.CharField(max_length=50, null=True)),
                 ("languages", models.CharField(max_length=250, null=True)),
                 ("phone", models.CharField(max_length=20)),
-                ("continent", models.CharField(max_length=2)),
+                ("continent", models.CharField(max_length=2, default="")),
                 ("tld", models.CharField(max_length=5)),
                 ("capital", models.CharField(max_length=100)),
                 ("alt_names", models.ManyToManyField(to="cities.AlternativeName")),
@@ -131,16 +124,12 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 (
                     "name_std",
-                    models.CharField(
-                        max_length=200, verbose_name="standard name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="standard name", db_index=True),
                 ),
                 ("location", django.contrib.gis.db.models.fields.PointField(srid=4326)),
                 ("population", models.IntegerField()),
@@ -171,9 +160,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 ("code", models.CharField(max_length=20)),
@@ -209,16 +196,12 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 (
                     "name_std",
-                    models.CharField(
-                        max_length=200, verbose_name="standard name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="standard name", db_index=True),
                 ),
                 ("code", models.CharField(max_length=200, db_index=True)),
                 ("alt_names", models.ManyToManyField(to="cities.AlternativeName")),
@@ -248,24 +231,18 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        max_length=200, verbose_name="ascii name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="ascii name", db_index=True),
                 ),
                 ("slug", models.CharField(max_length=200)),
                 (
                     "name_std",
-                    models.CharField(
-                        max_length=200, verbose_name="standard name", db_index=True
-                    ),
+                    models.CharField(max_length=200, verbose_name="standard name", db_index=True),
                 ),
                 ("code", models.CharField(max_length=200, db_index=True)),
                 ("alt_names", models.ManyToManyField(to="cities.AlternativeName")),
                 (
                     "region",
-                    models.ForeignKey(
-                        to="cities.Region", on_delete=SET_NULL_OR_CASCADE
-                    ),
+                    models.ForeignKey(to="cities.Region", on_delete=SET_NULL_OR_CASCADE),
                 ),
             ],
             options={
@@ -283,9 +260,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="city",
             name="region",
-            field=models.ForeignKey(
-                blank=True, to="cities.Region", null=True, on_delete=SET_NULL_OR_CASCADE
-            ),
+            field=models.ForeignKey(blank=True, to="cities.Region", null=True, on_delete=SET_NULL_OR_CASCADE),
         ),
         migrations.AddField(
             model_name="city",
