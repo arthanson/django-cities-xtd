@@ -208,11 +208,9 @@ class Command(BaseCommand):
 
     def import_country(self):
         self.download("country")
-        data = self.get_data("country")
-
-        total = sum(1 for _ in data) - len(NO_LONGER_EXISTENT_COUNTRY_CODES)
-
-        data = self.get_data("country")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("country"))
+        total = len(data) - len(NO_LONGER_EXISTENT_COUNTRY_CODES)
 
         neighbours = {}
         countries = {}
@@ -295,23 +293,24 @@ class Command(BaseCommand):
             return
 
         self.country_index = {}
+        # Fetch queryset once and calculate count efficiently
+        countries_qs = Country.objects.all()
+        total = countries_qs.count()
         for obj in tqdm(
-            Country.objects.all(),
+            countries_qs.iterator(),
             disable=self.options.get("quiet"),
-            total=Country.objects.all().count(),
+            total=total,
             desc="Building country index",
         ):
             self.country_index[obj.code] = obj
 
     def import_region(self):
         self.download("region")
-        data = self.get_data("region")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("region"))
+        total = len(data)
 
         self.build_country_index()
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("region")
 
         countries_not_found = {}
         for item in tqdm(
@@ -376,24 +375,27 @@ class Command(BaseCommand):
             return
 
         self.region_index = {}
+        # Fetch querysets once and calculate total count efficiently
+        regions_qs = Region.objects.all().select_related("country")
+        subregions_qs = Subregion.objects.all().select_related("region__country")
+        total = regions_qs.count() + subregions_qs.count()
+
         for obj in tqdm(
             chain(
-                Region.objects.all().prefetch_related("country"),
-                Subregion.objects.all().prefetch_related("region__country"),
+                regions_qs.iterator(),
+                subregions_qs.iterator(),
             ),
             disable=self.options.get("quiet"),
-            total=Region.objects.all().count() + Subregion.objects.all().count(),
+            total=total,
             desc="Building region index",
         ):
             self.region_index[obj.full_code()] = obj
 
     def import_subregion(self):
         self.download("subregion")
-        data = self.get_data("subregion")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("subregion")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("subregion"))
+        total = len(data)
 
         self.build_country_index()
         self.build_region_index()
@@ -461,11 +463,9 @@ class Command(BaseCommand):
 
     def import_city(self):
         self.download("city")
-        data = self.get_data("city")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("city")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("city"))
+        total = len(data)
 
         self.build_country_index()
         self.build_region_index()
@@ -578,11 +578,9 @@ class Command(BaseCommand):
             return
 
         self.download("hierarchy")
-        data = self.get_data("hierarchy")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("hierarchy")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("hierarchy"))
+        total = len(data)
 
         self.hierarchy = {}
         for item in tqdm(
@@ -597,21 +595,22 @@ class Command(BaseCommand):
 
     def import_district(self):
         self.download("city")
-        data = self.get_data("city")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("city")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("city"))
+        total = len(data)
 
         self.build_country_index()
         self.build_region_index()
         self.build_hierarchy()
 
         city_index = {}
+        # Fetch queryset once and calculate count efficiently
+        cities_qs = City.objects.all()
+        cities_count = cities_qs.count()
         for obj in tqdm(
-            City.objects.all(),
+            cities_qs.iterator(chunk_size=1000),
             disable=self.options.get("quiet"),
-            total=City.objects.all().count(),
+            total=cities_count,
             desc="Building city index",
         ):
             city_index[obj.id] = obj
@@ -719,21 +718,32 @@ class Command(BaseCommand):
 
     def import_alt_name(self):
         self.download("alt_name")
-        data = self.get_data("alt_name")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("alt_name")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("alt_name"))
+        total = len(data)
 
         geo_index = {}
         for type_ in (Country, Region, Subregion, City, District):
             plural_type_name = (
                 "{}s".format(type_.__name__) if type_.__name__[-1] != "y" else "{}ies".format(type_.__name__[:-1])
             )
+            # Fetch queryset once and calculate count efficiently
+            # Use select_related to prefetch foreign keys that will be accessed
+            qs = type_.objects.all()
+            if type_ == Region:
+                qs = qs.select_related("country")
+            elif type_ == Subregion:
+                qs = qs.select_related("region__country")
+            elif type_ == City:
+                qs = qs.select_related("country", "region", "subregion")
+            elif type_ == District:
+                qs = qs.select_related("city__country", "city__region", "city__subregion")
+
+            total_count = qs.count()
             for obj in tqdm(
-                type_.objects.all(),
+                qs.iterator(chunk_size=1000),
                 disable=self.options.get("quiet"),
-                total=type_.objects.all().count(),
+                total=total_count,
                 desc="Building geo index for {}".format(plural_type_name.lower()),
             ):
                 geo_index[obj.id] = {
@@ -877,11 +887,9 @@ class Command(BaseCommand):
 
     def import_postal_code(self):
         self.download("postal_code")
-        data = self.get_data("postal_code")
-
-        total = sum(1 for _ in data)
-
-        data = self.get_data("postal_code")
+        # Load data once into memory to avoid double file parsing
+        data = list(self.get_data("postal_code"))
+        total = len(data)
 
         self.build_country_index()
         self.build_region_index()
