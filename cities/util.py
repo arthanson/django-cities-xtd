@@ -1,20 +1,12 @@
 import re
-import sys
 import unicodedata
 from math import acos, cos, radians, sin
 
-import six
 from django.utils.encoding import force_str as force_text
 from django.utils.functional import keep_lazy
 from django.utils.safestring import SafeText, mark_safe
 
 from .conf import CONTINENT_DATA
-
-if sys.version_info < (3, 0):
-    unicode_func = unicode  # noqa: F821
-else:
-    unicode_func = str
-
 
 # GEO DISTANCE
 
@@ -61,7 +53,7 @@ def default_slugify(obj, value):
     if value is None:
         return None
 
-    value = force_text(unicode_func(value))
+    value = force_text(str(value))
     value = unicodedata.normalize("NFKC", value.strip())
     value = re.sub(to_und_rgx, "_", value)
     value = re.sub(slugify_rgx, "-", value)
@@ -73,7 +65,7 @@ def default_slugify(obj, value):
     return mark_safe(value)
 
 
-default_slugify = keep_lazy(six.text_type, SafeText)(default_slugify)
+default_slugify = keep_lazy(str, SafeText)(default_slugify)
 
 
 # DJANGO BACKWARDS-COMPATIBLE PATTERNS
@@ -81,8 +73,6 @@ default_slugify = keep_lazy(six.text_type, SafeText)(default_slugify)
 
 def patterns(prefix, *args):
     if prefix != "":
-        raise Exception(
-            "You need to update your URLConf to be a list of URL " "objects"
-        )
+        raise Exception("You need to update your URLConf to be a list of URL " "objects")
     else:
         return list(args)

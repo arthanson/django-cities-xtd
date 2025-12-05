@@ -14,23 +14,15 @@ http://download.geonames.org/export/zip/
 - Postal Codes:         allCountries.zip
 """
 
-from __future__ import print_function
-
 import io
 import json
 import logging
 import math
 import os
 import re
-import sys
 import zipfile
-
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib import urlopen
-
 from itertools import chain
+from urllib.request import urlopen
 
 from django.contrib.gis.gdal.envelope import Envelope
 from django.contrib.gis.geos import Point
@@ -46,19 +38,22 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import CharField, ForeignKey, Q
 
-from ...conf import (CURRENCY_SYMBOLS, INCLUDE_AIRPORT_CODES,
-                     INCLUDE_NUMERIC_ALTERNATIVE_NAMES,
-                     NO_LONGER_EXISTENT_COUNTRY_CODES,
-                     SKIP_CITIES_WITH_EMPTY_REGIONS, VALIDATE_POSTAL_CODES,
-                     HookException, city_types, district_types, import_opts,
-                     import_opts_all, settings)
+from ...conf import (
+    CURRENCY_SYMBOLS,
+    INCLUDE_AIRPORT_CODES,
+    INCLUDE_NUMERIC_ALTERNATIVE_NAMES,
+    NO_LONGER_EXISTENT_COUNTRY_CODES,
+    SKIP_CITIES_WITH_EMPTY_REGIONS,
+    VALIDATE_POSTAL_CODES,
+    HookException,
+    city_types,
+    district_types,
+    import_opts,
+    import_opts_all,
+    settings,
+)
 from ...models import AlternativeName, District, PostalCode, Region, Subregion
 from ...util import geo_distance
-
-# Interpret all files as utf-8
-if sys.version_info < (3,):
-    reload(sys)  # noqa: F821
-    sys.setdefaultencoding("utf-8")
 
 # Load swappable models
 Continent = load_model("cities", "Continent")
@@ -74,9 +69,7 @@ class Command(BaseCommand):
     if hasattr(settings, "data_dir"):
         data_dir = settings.data_dir
     else:
-        app_dir = os.path.normpath(
-            os.path.dirname(os.path.realpath(__file__)) + "/../.."
-        )
+        app_dir = os.path.normpath(os.path.dirname(os.path.realpath(__file__)) + "/../..")
         data_dir = os.path.join(app_dir, "data")
     logger = logging.getLogger(LOGGER_NAME)
 
@@ -93,8 +86,7 @@ class Command(BaseCommand):
             metavar="DATA_TYPES",
             default="all",
             dest="import",
-            help="Selectively import data. Comma separated list of data "
-            "types: " + str(import_opts).replace("'", ""),
+            help="Selectively import data. Comma separated list of data " "types: " + str(import_opts).replace("'", ""),
         )
         parser.add_argument(
             "--flush",
@@ -155,18 +147,14 @@ class Command(BaseCommand):
 
         for filename in filenames:
             web_file = None
-            urls = [
-                e.format(filename=filename) for e in settings.files[filekey]["urls"]
-            ]
+            urls = [e.format(filename=filename) for e in settings.files[filekey]["urls"]]
             for url in urls:
                 try:
                     web_file = urlopen(url)
                     if "html" in web_file.headers["Content-Type"]:
                         # TODO: Make this a subclass
                         raise Exception(
-                            "Content type of downloaded file was {}".format(
-                                web_file.headers["Content-Type"]
-                            )
+                            "Content type of downloaded file was {}".format(web_file.headers["Content-Type"])
                         )
                     self.logger.debug("Downloaded: {}".format(url))
                     break
@@ -174,9 +162,7 @@ class Command(BaseCommand):
                     web_file = None
                     continue
             else:
-                self.logger.error(
-                    "Web file not found: %s. Tried URLs:\n%s", filename, "\n".join(urls)
-                )
+                self.logger.error("Web file not found: %s. Tried URLs:\n%s", filename, "\n".join(urls))
 
             if web_file is not None:
                 self.logger.debug("Saving: {}/{}".format(self.data_dir, filename))
@@ -186,9 +172,7 @@ class Command(BaseCommand):
                 file.write(web_file.read())
                 file.close()
             elif not os.path.exists(os.path.join(self.data_dir, filename)):
-                raise Exception(
-                    "File not found and download failed: {} [{}]".format(filename, urls)
-                )
+                raise Exception("File not found and download failed: {} [{}]".format(filename, urls))
 
     def get_data(self, filekey):
         if "filename" in settings.files[filekey]:
@@ -203,9 +187,7 @@ class Command(BaseCommand):
                 zip_member = zipfile.ZipFile(filepath).open(name + ".txt", "r")
                 file_obj = io.TextIOWrapper(zip_member, encoding="utf-8")
             else:
-                file_obj = io.open(
-                    os.path.join(self.data_dir, filename), "r", encoding="utf-8"
-                )
+                file_obj = io.open(os.path.join(self.data_dir, filename), "r", encoding="utf-8")
 
             for row in file_obj:
                 if not row.startswith("#"):
@@ -241,9 +223,7 @@ class Command(BaseCommand):
         # If the continent attribute on Country is a ForeignKey, import
         # continents as ForeignKeys to the Continent models, otherwise assume
         # they are still the CharField(max_length=2) and import them the old way
-        import_continents_as_fks = (
-            type(Country._meta.get_field("continent")) is ForeignKey
-        )
+        import_continents_as_fks = type(Country._meta.get_field("continent")) is ForeignKey
 
         for item in tqdm(
             [d for d in data if d["code"] not in NO_LONGER_EXISTENT_COUNTRY_CODES],
@@ -257,16 +237,10 @@ class Command(BaseCommand):
             try:
                 country_id = int(item["geonameid"])
             except KeyError:
-                self.logger.warning(
-                    "Country has no geonameid: {} -- skipping".format(item)
-                )
+                self.logger.warning("Country has no geonameid: {} -- skipping".format(item))
                 continue
             except ValueError:
-                self.logger.warning(
-                    "Country has non-numeric geonameid: {} -- skipping".format(
-                        item["geonameid"]
-                    )
-                )
+                self.logger.warning("Country has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
                 continue
 
             defaults = {
@@ -274,11 +248,7 @@ class Command(BaseCommand):
                 "code": item["code"],
                 "code3": item["code3"],
                 "population": item["population"],
-                "continent": (
-                    continents[item["continent"]]
-                    if import_continents_as_fks
-                    else item["continent"]
-                ),
+                "continent": (continents[item["continent"]] if import_continents_as_fks else item["continent"]),
                 "tld": item["tld"][1:],  # strip the leading .
                 "phone": item["phone"],
                 "currency": item["currencyCode"],
@@ -289,31 +259,22 @@ class Command(BaseCommand):
 
             if hasattr(Country, "language_codes"):
                 defaults["language_codes"] = item["languages"]
-            elif (
-                hasattr(Country, "languages")
-                and type(getattr(Country, "languages")) is CharField
-            ):
+            elif hasattr(Country, "languages") and type(getattr(Country, "languages")) is CharField:
                 defaults["languages"] = item["languages"]
 
             # These fields shouldn't impact saving older models (that don't
             # have these attributes)
             try:
-                defaults["currency_symbol"] = CURRENCY_SYMBOLS.get(
-                    item["currencyCode"], None
-                )
+                defaults["currency_symbol"] = CURRENCY_SYMBOLS.get(item["currencyCode"], None)
                 defaults["postal_code_format"] = item["postalCodeFormat"]
                 defaults["postal_code_regex"] = item["postalCodeRegex"]
             except AttributeError:
                 pass
 
             # Make importing countries idempotent
-            country, created = Country.objects.update_or_create(
-                id=country_id, defaults=defaults
-            )
+            country, created = Country.objects.update_or_create(id=country_id, defaults=defaults)
 
-            self.logger.debug(
-                "%s country '%s'", "Added" if created else "Updated", defaults["name"]
-            )
+            self.logger.debug("%s country '%s'", "Added" if created else "Updated", defaults["name"])
 
             neighbours[country] = item["neighbours"].split(",")
             countries[country.code] = country
@@ -327,9 +288,7 @@ class Command(BaseCommand):
             total=len(neighbours),
             desc="Importing country neighbours",
         ):
-            neighbours = [
-                x for x in [countries.get(x) for x in neighbour_codes if x] if x
-            ]
+            neighbours = [x for x in [countries.get(x) for x in neighbour_codes if x] if x]
             country.neighbours.add(*neighbours)
 
     def build_country_index(self):
@@ -368,16 +327,10 @@ class Command(BaseCommand):
             try:
                 region_id = int(item["geonameid"])
             except KeyError:
-                self.logger.warning(
-                    "Region has no geonameid: {} -- skipping".format(item)
-                )
+                self.logger.warning("Region has no geonameid: {} -- skipping".format(item))
                 continue
             except ValueError:
-                self.logger.warning(
-                    "Region has non-numeric geonameid: {} -- skipping".format(
-                        item["geonameid"]
-                    )
-                )
+                self.logger.warning("Region has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
                 continue
 
             country_code, region_code = item["code"].split(".")
@@ -391,9 +344,7 @@ class Command(BaseCommand):
             try:
                 defaults["country"] = self.country_index[country_code]
             except KeyError:
-                countries_not_found.setdefault(country_code, []).append(
-                    defaults["name"]
-                )
+                countries_not_found.setdefault(country_code, []).append(defaults["name"])
                 self.logger.warning(
                     "Region: %s: Cannot find country: %s -- skipping",
                     defaults["name"],
@@ -401,9 +352,7 @@ class Command(BaseCommand):
                 )
                 continue
 
-            region, created = Region.objects.update_or_create(
-                id=region_id, defaults=defaults
-            )
+            region, created = Region.objects.update_or_create(id=region_id, defaults=defaults)
 
             if not self.call_hook("region_post", region, item):
                 continue
@@ -416,18 +365,12 @@ class Command(BaseCommand):
             )
 
         if countries_not_found:
-            countries_not_found_file = os.path.join(
-                self.data_dir, "countries_not_found.json"
-            )
+            countries_not_found_file = os.path.join(self.data_dir, "countries_not_found.json")
             try:
                 with open(countries_not_found_file, "w+") as fp:
                     json.dump(countries_not_found, fp)
             except Exception as e:
-                self.logger.warning(
-                    "Unable to write log file '{}': {}".format(
-                        countries_not_found_file, e
-                    )
-                )
+                self.logger.warning("Unable to write log file '{}': {}".format(countries_not_found_file, e))
 
     def build_region_index(self):
         if hasattr(self, "region_index"):
@@ -469,16 +412,10 @@ class Command(BaseCommand):
             try:
                 subregion_id = int(item["geonameid"])
             except KeyError:
-                self.logger.warning(
-                    "Subregion has no geonameid: {} -- skipping".format(item)
-                )
+                self.logger.warning("Subregion has no geonameid: {} -- skipping".format(item))
                 continue
             except ValueError:
-                self.logger.warning(
-                    "Subregion has non-numeric geonameid: {} -- skipping".format(
-                        item["geonameid"]
-                    )
-                )
+                self.logger.warning("Subregion has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
                 continue
 
             country_code, region_code, subregion_code = item["code"].split(".")
@@ -493,9 +430,7 @@ class Command(BaseCommand):
                 defaults["region"] = self.region_index[country_code + "." + region_code]
             except KeyError:
                 regions_not_found.setdefault(country_code, {})
-                regions_not_found[country_code].setdefault(region_code, []).append(
-                    defaults["name"]
-                )
+                regions_not_found[country_code].setdefault(region_code, []).append(defaults["name"])
                 self.logger.debug(
                     "Subregion: %s %s: Cannot find region",
                     item["code"],
@@ -503,9 +438,7 @@ class Command(BaseCommand):
                 )
                 continue
 
-            subregion, created = Subregion.objects.update_or_create(
-                id=subregion_id, defaults=defaults
-            )
+            subregion, created = Subregion.objects.update_or_create(id=subregion_id, defaults=defaults)
 
             if not self.call_hook("subregion_post", subregion, item):
                 continue
@@ -518,18 +451,12 @@ class Command(BaseCommand):
             )
 
         if regions_not_found:
-            regions_not_found_file = os.path.join(
-                self.data_dir, "regions_not_found.json"
-            )
+            regions_not_found_file = os.path.join(self.data_dir, "regions_not_found.json")
             try:
                 with open(regions_not_found_file, "w+") as fp:
                     json.dump(regions_not_found, fp)
             except Exception as e:
-                self.logger.warning(
-                    "Unable to write log file '{}': {}".format(
-                        regions_not_found_file, e
-                    )
-                )
+                self.logger.warning("Unable to write log file '{}': {}".format(regions_not_found_file, e))
 
         del self.region_index
 
@@ -559,16 +486,10 @@ class Command(BaseCommand):
             try:
                 city_id = int(item["geonameid"])
             except KeyError:
-                self.logger.warning(
-                    "City has no geonameid: {} -- skipping".format(item)
-                )
+                self.logger.warning("City has no geonameid: {} -- skipping".format(item))
                 continue
             except ValueError:
-                self.logger.warning(
-                    "City has non-numeric geonameid: {} -- skipping".format(
-                        item["geonameid"]
-                    )
-                )
+                self.logger.warning("City has non-numeric geonameid: {} -- skipping".format(item["geonameid"]))
                 continue
 
             defaults = {
@@ -620,26 +541,20 @@ class Command(BaseCommand):
 
             subregion_code = item["admin2Code"]
             try:
-                subregion = self.region_index[
-                    country_code + "." + region_code + "." + subregion_code
-                ]
+                subregion = self.region_index[country_code + "." + region_code + "." + subregion_code]
                 defaults["subregion"] = subregion
             except KeyError:
                 try:
                     with transaction.atomic():
                         defaults["subregion"] = Subregion.objects.get(
-                            Q(name=subregion_code)
-                            | Q(name=subregion_code.replace(" (undefined)", "")),
+                            Q(name=subregion_code) | Q(name=subregion_code.replace(" (undefined)", "")),
                             region=defaults["region"],
                         )
                 except Subregion.DoesNotExist:
                     try:
                         with transaction.atomic():
                             defaults["subregion"] = Subregion.objects.get(
-                                Q(name_std=subregion_code)
-                                | Q(
-                                    name_std=subregion_code.replace(" (undefined)", "")
-                                ),
+                                Q(name_std=subregion_code) | Q(name_std=subregion_code.replace(" (undefined)", "")),
                                 region=defaults["region"],
                             )
                     except Subregion.DoesNotExist:
@@ -768,37 +683,27 @@ class Command(BaseCommand):
                         defaults["location"].x + search_deg,
                         defaults["location"].y + search_deg,
                     )
-                    for e in City.objects.filter(population__gt=city_pop_min).filter(
-                        location__intersects=bounds.wkt
-                    ):
+                    for e in City.objects.filter(population__gt=city_pop_min).filter(location__intersects=bounds.wkt):
                         dist = geo_distance(defaults["location"], e.location)
                         if dist < min_dist:
                             min_dist = dist
                             city = e
             else:
-                self.logger.debug(
-                    "Found city in hierarchy: %s [%d]", city.name, geonameid
-                )
+                self.logger.debug("Found city in hierarchy: %s [%d]", city.name, geonameid)
 
             if not city:
-                self.logger.warning(
-                    "District: %s: Cannot find city -- skipping", defaults["name"]
-                )
+                self.logger.warning("District: %s: Cannot find city -- skipping", defaults["name"])
                 continue
 
             defaults["city"] = city
 
             try:
                 with transaction.atomic():
-                    district = District.objects.get(
-                        city=defaults["city"], name=defaults["name"]
-                    )
+                    district = District.objects.get(city=defaults["city"], name=defaults["name"])
             except District.DoesNotExist:
                 # If the district doesn't exist, create it with the geonameid
                 # as its id
-                district, created = District.objects.update_or_create(
-                    id=item["geonameid"], defaults=defaults
-                )
+                district, created = District.objects.update_or_create(id=item["geonameid"], defaults=defaults)
             else:
                 # Since the district already exists, but doesn't have its
                 # geonameid as its id, we need to update all of its attributes
@@ -811,9 +716,7 @@ class Command(BaseCommand):
             if not self.call_hook("district_post", district, item):
                 continue
 
-            self.logger.debug(
-                "%s district: %s", "Added" if created else "Updated", district
-            )
+            self.logger.debug("%s district: %s", "Added" if created else "Updated", district)
 
     def import_alt_name(self):
         self.download("alt_name")
@@ -826,9 +729,7 @@ class Command(BaseCommand):
         geo_index = {}
         for type_ in (Country, Region, Subregion, City, District):
             plural_type_name = (
-                "{}s".format(type_.__name__)
-                if type_.__name__[-1] != "y"
-                else "{}ies".format(type_.__name__[:-1])
+                "{}s".format(type_.__name__) if type_.__name__[-1] != "y" else "{}ies".format(type_.__name__[:-1])
             )
             for obj in tqdm(
                 type_.objects.all(),
@@ -856,8 +757,7 @@ class Command(BaseCommand):
                 locale = "und"
             if locale not in settings.locales and "all" not in settings.locales:
                 self.logger.debug(
-                    "Alternative name with language [{}]: {} "
-                    "({}) -- skipping".format(
+                    "Alternative name with language [{}]: {} " "({}) -- skipping".format(
                         item["language"], item["name"], item["nameid"]
                     )
                 )
@@ -873,9 +773,7 @@ class Command(BaseCommand):
             try:
                 alt_id = int(item["nameid"])
             except KeyError:
-                self.logger.warning(
-                    "Alternative name has no nameid: {} -- skipping".format(item)
-                )
+                self.logger.warning("Alternative name has no nameid: {} -- skipping".format(item))
                 continue
 
             try:
@@ -906,12 +804,7 @@ class Command(BaseCommand):
                     )
                     continue
             alt.is_historic = (
-                True
-                if (
-                    (item["isHistoric"] and item["isHistoric"] != "\n")
-                    or locale == "fr_1793"
-                )
-                else False
+                True if ((item["isHistoric"] and item["isHistoric"] != "\n") or locale == "fr_1793") else False
             )
 
             if locale == "post":
@@ -950,16 +843,10 @@ class Command(BaseCommand):
                 continue
 
             if hasattr(alt, "kind"):
-                if (
-                    locale in ("abbr", "link", "name")
-                    or INCLUDE_AIRPORT_CODES
-                    and locale in ("iana", "icao", "faac")
-                ):
+                if locale in ("abbr", "link", "name") or INCLUDE_AIRPORT_CODES and locale in ("iana", "icao", "faac"):
                     alt.kind = locale
                 elif locale not in settings.locales and "all" not in settings.locales:
-                    self.logger.debug(
-                        "Unknown alternative name type: {} -- skipping".format(locale)
-                    )
+                    self.logger.debug("Unknown alternative name type: {} -- skipping".format(locale))
                     continue
 
             alt.save()
@@ -984,15 +871,9 @@ class Command(BaseCommand):
             desc="Building postal code regex index",
         ):
             try:
-                self.postal_code_regex_index[code] = re.compile(
-                    country.postal_code_regex
-                )
+                self.postal_code_regex_index[code] = re.compile(country.postal_code_regex)
             except Exception as e:
-                self.logger.error(
-                    "Couldn't compile postal code regex for {}: {}".format(
-                        country.code, e.args
-                    )
-                )
+                self.logger.error("Couldn't compile postal code regex for {}: {}".format(country.code, e.args))
                 self.postal_code_regex_index[code] = ""
 
     def import_postal_code(self):
@@ -1013,10 +894,7 @@ class Command(BaseCommand):
         query_statistics = [0 for i in range(8)]
         num_existing_postal_codes = PostalCode.objects.count()
         if num_existing_postal_codes == 0:
-            self.logger.debug(
-                "Zero postal codes found - using only-create "
-                "postal code optimization"
-            )
+            self.logger.debug("Zero postal codes found - using only-create " "postal code optimization")
         for item in tqdm(
             data,
             disable=self.options.get("quiet"),
@@ -1027,18 +905,13 @@ class Command(BaseCommand):
                 continue
 
             country_code = item["countryCode"]
-            if (
-                country_code not in settings.postal_codes
-                and "ALL" not in settings.postal_codes
-            ):
+            if country_code not in settings.postal_codes and "ALL" not in settings.postal_codes:
                 continue
 
             try:
                 code = item["postalCode"]
             except KeyError:
-                self.logger.warning(
-                    "Postal code has no code: {} -- skipping".format(item)
-                )
+                self.logger.warning("Postal code has no code: {} -- skipping".format(item))
                 continue
 
             # Find country
@@ -1054,13 +927,8 @@ class Command(BaseCommand):
 
             # Validate postal code against the country
             code = item["postalCode"]
-            if (
-                VALIDATE_POSTAL_CODES
-                and self.postal_code_regex_index[country_code].match(code) is None
-            ):
-                self.logger.warning(
-                    "Postal code didn't validate: {} ({})".format(code, country_code)
-                )
+            if VALIDATE_POSTAL_CODES and self.postal_code_regex_index[country_code].match(code) is None:
+                self.logger.warning("Postal code didn't validate: {} ({})".format(code, country_code))
                 continue
 
             reg_name_q = Q(region_name__iexact=item["admin1Name"])
@@ -1082,9 +950,7 @@ class Command(BaseCommand):
                 location = None
 
             if len(item["placeName"]) >= 200:
-                self.logger.warning(
-                    "Postal code name has more than 200 characters: {}".format(item)
-                )
+                self.logger.warning("Postal code name has more than 200 characters: {}".format(item))
 
             if num_existing_postal_codes > 0:
                 postal_code_args = (
@@ -1195,8 +1061,7 @@ class Command(BaseCommand):
                 try:
                     with transaction.atomic():
                         pc.region = Region.objects.get(
-                            Q(name_std__iexact=pc.region_name)
-                            | Q(name__iexact=pc.region_name),
+                            Q(name_std__iexact=pc.region_name) | Q(name__iexact=pc.region_name),
                             country=pc.country,
                         )
                 except Region.DoesNotExist:
@@ -1208,10 +1073,8 @@ class Command(BaseCommand):
                 try:
                     with transaction.atomic():
                         pc.subregion = Subregion.objects.get(
-                            Q(region__name_std__iexact=pc.region_name)
-                            | Q(region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.subregion_name)
-                            | Q(name__iexact=pc.subregion_name),
+                            Q(region__name_std__iexact=pc.region_name) | Q(region__name__iexact=pc.region_name),
+                            Q(name_std__iexact=pc.subregion_name) | Q(name__iexact=pc.subregion_name),
                             region__country=pc.country,
                         )
                 except Subregion.DoesNotExist:
@@ -1225,8 +1088,7 @@ class Command(BaseCommand):
                         pc.district = District.objects.get(
                             Q(city__region__name_std__iexact=pc.region_name)
                             | Q(city__region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.district_name)
-                            | Q(name__iexact=pc.district_name),
+                            Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
                             city__country=pc.country,
                         )
                 except District.MultipleObjectsReturned as e:
@@ -1236,8 +1098,7 @@ class Command(BaseCommand):
                             District.objects.filter(
                                 Q(city__region__name_std__iexact=pc.region_name)
                                 | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name)
-                                | Q(name__iexact=pc.district_name),
+                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
                                 city__country=pc.country,
                             ).values_list("id", flat=True),
                         )
@@ -1247,8 +1108,7 @@ class Command(BaseCommand):
                         District.objects.filter(
                             Q(city__region__name_std__iexact=pc.region_name)
                             | Q(city__region__name__iexact=pc.region_name),
-                            Q(name_std__iexact=pc.district_name)
-                            | Q(name__iexact=pc.district_name),
+                            Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
                             city__country=pc.country,
                         )
                         .values_list("city")
@@ -1261,8 +1121,7 @@ class Command(BaseCommand):
                             District.objects.filter(
                                 Q(city__region__name_std__iexact=pc.region_name)
                                 | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name)
-                                | Q(name__iexact=pc.district_name),
+                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
                                 city__country=pc.country,
                             )
                             .order_by("city__id")
@@ -1273,8 +1132,7 @@ class Command(BaseCommand):
                             District.objects.filter(
                                 Q(city__region__name_std__iexact=pc.region_name)
                                 | Q(city__region__name__iexact=pc.region_name),
-                                Q(name_std__iexact=pc.district_name)
-                                | Q(name__iexact=pc.district_name),
+                                Q(name_std__iexact=pc.district_name) | Q(name__iexact=pc.district_name),
                                 city__country=pc.country,
                             )
                             .order_by("city__id")
@@ -1354,11 +1212,7 @@ class Command(BaseCommand):
     def flush_alt_name(self):
         self.logger.info("Flushing alternate name data")
         for type_ in (Country, Region, Subregion, City, District, PostalCode):
-            plural_type_name = (
-                type_.__name__
-                if type_.__name__[-1] != "y"
-                else "{}ies".format(type_.__name__[:-1])
-            )
+            plural_type_name = type_.__name__ if type_.__name__[-1] != "y" else "{}ies".format(type_.__name__[:-1])
             for obj in tqdm(
                 type_.objects.all(),
                 disable=self.options.get("quiet"),

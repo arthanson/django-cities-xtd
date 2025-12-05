@@ -32,7 +32,6 @@ classifiers = [
 ]
 dependencies = [
     "django-model-utils",
-    "six",
     "swapper",
     "tqdm",
 ]

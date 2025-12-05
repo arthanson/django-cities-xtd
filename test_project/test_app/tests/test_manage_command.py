@@ -8,12 +8,18 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.test.signals import setting_changed
 
-from cities.models import (AlternativeName, City, Country, District,
-                           PostalCode, Region, Subregion)
+from cities.models import AlternativeName, City, Country, District, PostalCode, Region, Subregion
 
-from ..mixins import (AlternativeNamesMixin, CitiesMixin, CountriesMixin,
-                      DistrictsMixin, NoInvalidSlugsMixin, PostalCodesMixin,
-                      RegionsMixin, SubregionsMixin)
+from ..mixins import (
+    AlternativeNamesMixin,
+    CitiesMixin,
+    CountriesMixin,
+    DistrictsMixin,
+    NoInvalidSlugsMixin,
+    PostalCodesMixin,
+    RegionsMixin,
+    SubregionsMixin,
+)
 from ..utils import reload_cities_settings
 
 setting_changed.connect(reload_cities_settings, dispatch_uid="reload_cities_settings")

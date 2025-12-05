@@ -11,7 +11,6 @@ from model_utils import Choices
 
 from .conf import ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION
 from .managers import AlternativeNameManager
-from .util import unicode_func
 
 __all__ = [
     "Point",
@@ -53,9 +52,7 @@ class SlugModel(models.Model):
             with transaction.atomic():
                 # We first give a randomized slug with a prefix just in case
                 # users need to find invalid slugs
-                self.slug = "invalid-{}".format(
-                    "".join(choice(ascii_uppercase + digits) for i in range(20))
-                )
+                self.slug = "invalid-{}".format("".join(choice(ascii_uppercase + digits) for i in range(20)))
                 super(SlugModel, self).save(*args, **kwargs)
                 self.slug = slugify_func(self, self.slugify())
 
@@ -165,9 +162,7 @@ class Country(BaseCountry):
 
 
 class Region(Place, SlugModel):
-    name_std = models.CharField(
-        max_length=200, db_index=True, verbose_name="standard name"
-    )
+    name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(max_length=200, db_index=True)
     country = models.ForeignKey(
         swapper.get_model_name("cities", "Country"),
@@ -183,22 +178,18 @@ class Region(Place, SlugModel):
         return self.country
 
     def full_code(self):
-        return unicode_func(".".join([self.parent.code, self.code]))
+        return str(".".join([self.parent.code, self.code]))
 
     def slugify(self):
-        return "{}_({})".format(unicode_func(self.name), unicode_func(self.full_code()))
+        return "{}_({})".format(str(self.name), str(self.full_code()))
 
 
 class Subregion(Place, SlugModel):
     slug_contains_id = True
 
-    name_std = models.CharField(
-        max_length=200, db_index=True, verbose_name="standard name"
-    )
+    name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(max_length=200, db_index=True)
-    region = models.ForeignKey(
-        Region, related_name="subregions", on_delete=SET_NULL_OR_CASCADE
-    )
+    region = models.ForeignKey(Region, related_name="subregions", on_delete=SET_NULL_OR_CASCADE)
 
     class Meta:
         unique_together = (("region", "id", "name"),)
@@ -211,17 +202,13 @@ class Subregion(Place, SlugModel):
         return ".".join([self.parent.parent.code, self.parent.code, self.code])
 
     def slugify(self):
-        return unicode_func("{}-{}").format(
-            unicode_func(self.id), unicode_func(self.name)
-        )
+        return str("{}-{}").format(str(self.id), str(self.name))
 
 
 class BaseCity(Place, SlugModel):
     slug_contains_id = True
 
-    name_std = models.CharField(
-        max_length=200, db_index=True, verbose_name="standard name"
-    )
+    name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     country = models.ForeignKey(
         swapper.get_model_name("cities", "Country"),
         related_name="cities",
@@ -258,7 +245,7 @@ class BaseCity(Place, SlugModel):
 
     def slugify(self):
         if self.id:
-            return "{}-{}".format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
@@ -270,9 +257,7 @@ class City(BaseCity):
 class District(Place, SlugModel):
     slug_contains_id = True
 
-    name_std = models.CharField(
-        max_length=200, db_index=True, verbose_name="standard name"
-    )
+    name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(blank=True, db_index=True, max_length=200, null=True)
     location = PointField()
     population = models.IntegerField()
@@ -291,7 +276,7 @@ class District(Place, SlugModel):
 
     def slugify(self):
         if self.id:
-            return "{}-{}".format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
@@ -315,7 +300,7 @@ class AlternativeName(SlugModel):
 
     def slugify(self):
         if self.id:
-            return "{}-{}".format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
@@ -419,5 +404,5 @@ class PostalCode(Place, SlugModel):
 
     def slugify(self):
         if self.id:
-            return "{}-{}".format(self.id, unicode_func(self.code))
+            return "{}-{}".format(self.id, str(self.code))
         return None

@@ -6,11 +6,7 @@ from importlib import import_module
 import django
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
-
-if float(".".join(map(str, django.VERSION[:2]))) < 3:
-    from django.utils.translation import ugettext_lazy as _
-else:
-    from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 __all__ = [
     "city_types",
@@ -602,9 +598,7 @@ _CURRENCY_SYMBOLS = {
 
 _NO_LONGER_EXISTENT_COUNTRY_CODES = ["CS", "AN"]
 
-_SLUGIFY_FUNCTION = getattr(
-    django_settings, "CITIES_SLUGIFY_FUNCTION", "cities.util.default_slugify"
-)
+_SLUGIFY_FUNCTION = getattr(django_settings, "CITIES_SLUGIFY_FUNCTION", "cities.util.default_slugify")
 
 # See http://www.geonames.org/export/codes.html
 city_types = ["PPL", "PPLA", "PPLC", "PPLA2", "PPLA3", "PPLA4", "PPLG"]
@@ -683,13 +677,9 @@ def create_settings():
     res.files = files.copy()
     if hasattr(django_settings, "CITIES_FILES"):
         for key in list(django_settings.CITIES_FILES.keys()):
-            if (
-                "filenames" in django_settings.CITIES_FILES[key]
-                and "filename" in django_settings.CITIES_FILES[key]
-            ):
+            if "filenames" in django_settings.CITIES_FILES[key] and "filename" in django_settings.CITIES_FILES[key]:
                 raise ImproperlyConfigured(
-                    "Only one key should be specified for '%s': 'filename' of 'filenames'. Both specified instead"
-                    % key
+                    "Only one key should be specified for '%s': 'filename' of 'filenames'. Both specified instead" % key
                 )
             res.files[key].update(django_settings.CITIES_FILES[key])
             if "filenames" in django_settings.CITIES_FILES[key]:
@@ -713,11 +703,7 @@ def create_plugins():
         module = import_module(module_path)
         class_ = getattr(module, classname)
         obj = class_()
-        [
-            settings.plugins[hook].append(obj)
-            for hook in plugin_hooks
-            if hasattr(obj, hook)
-        ]
+        [settings.plugins[hook].append(obj) for hook in plugin_hooks if hasattr(obj, hook)]
 
 
 settings = create_settings()
@@ -729,9 +715,7 @@ if hasattr(django_settings, "CITIES_IGNORE_EMPTY_REGIONS"):
         "CITIES_IGNORE_EMPTY_REGIONS was ambiguous and has been moved to CITIES_SKIP_CITIES_WITH_EMPTY_REGIONS"
     )
 
-SKIP_CITIES_WITH_EMPTY_REGIONS = getattr(
-    django_settings, "CITIES_SKIP_CITIES_WITH_EMPTY_REGIONS", False
-)
+SKIP_CITIES_WITH_EMPTY_REGIONS = getattr(django_settings, "CITIES_SKIP_CITIES_WITH_EMPTY_REGIONS", False)
 
 # Users may way to import historical countries
 NO_LONGER_EXISTENT_COUNTRY_CODES = getattr(
@@ -747,20 +731,14 @@ if INCLUDE_AIRPORT_CODES:
     _ALTERNATIVE_NAME_TYPES += _AIRPORT_TYPES
 
 # A `Choices` object (from `django-model-utils`)
-ALTERNATIVE_NAME_TYPES = getattr(
-    django_settings, "CITIES_ALTERNATIVE_NAME_TYPES", _ALTERNATIVE_NAME_TYPES
-)
+ALTERNATIVE_NAME_TYPES = getattr(django_settings, "CITIES_ALTERNATIVE_NAME_TYPES", _ALTERNATIVE_NAME_TYPES)
 
-INCLUDE_NUMERIC_ALTERNATIVE_NAMES = getattr(
-    django_settings, "CITIES_INCLUDE_NUMERIC_ALTERNATIVE_NAMES", True
-)
+INCLUDE_NUMERIC_ALTERNATIVE_NAMES = getattr(django_settings, "CITIES_INCLUDE_NUMERIC_ALTERNATIVE_NAMES", True)
 
 # Allow users to override specified contents
 CONTINENT_DATA.update(getattr(django_settings, "CITIES_CONTINENT_DATA", {}))
 
-CURRENCY_SYMBOLS = getattr(
-    django_settings, "CITIES_CURRENCY_SYMBOLS", _CURRENCY_SYMBOLS
-)
+CURRENCY_SYMBOLS = getattr(django_settings, "CITIES_CURRENCY_SYMBOLS", _CURRENCY_SYMBOLS)
 
 module_name, _, function_name = _SLUGIFY_FUNCTION.rpartition(".")
 SLUGIFY_FUNCTION = getattr(import_module(module_name), function_name)

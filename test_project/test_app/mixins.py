@@ -3,8 +3,7 @@ from __future__ import unicode_literals
 
 import re
 
-from cities.models import (AlternativeName, City, Continent, Country, District,
-                           PostalCode, Region, Subregion)
+from cities.models import AlternativeName, City, Continent, Country, District, PostalCode, Region, Subregion
 from cities.util import add_continents
 
 

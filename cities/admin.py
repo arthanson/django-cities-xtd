@@ -1,8 +1,7 @@
 import swapper
 from django.contrib import admin
 
-from .models import (AlternativeName, City, Continent, Country, District,
-                     PostalCode, Region, Subregion)
+from .models import AlternativeName, City, Continent, Country, District, PostalCode, Region, Subregion
 
 
 class CitiesAdmin(admin.ModelAdmin):
