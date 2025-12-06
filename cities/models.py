@@ -74,7 +74,7 @@ class SlugModel(models.Model):
 
 class Place(models.Model):
     name = models.CharField(max_length=200, db_index=True, verbose_name="ascii name")
-    alt_names = models.ManyToManyField("AlternativeName")
+    alt_names = models.ManyToManyField(swapper.get_model_name("cities", "AlternativeName"))
 
     objects = GeoManager()
 
@@ -310,6 +310,9 @@ class AlternativeName(SlugModel):
     is_historic = models.BooleanField(default=False)
 
     objects = AlternativeNameManager()
+
+    class Meta:
+        swappable = swapper.swappable_setting("cities", "AlternativeName")
 
     def __str__(self):
         return "%s (%s)" % (force_text(self.name), force_text(self.language_code))
