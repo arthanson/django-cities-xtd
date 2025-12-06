@@ -1,6 +1,5 @@
 """Tests for data import commands with swappable models"""
 
-import os
 
 import swapper
 from django.core.management import call_command

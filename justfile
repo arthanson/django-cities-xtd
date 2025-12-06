@@ -5,18 +5,83 @@
 default:
     @just --list
 
-# Run tests with Python 3.14 + Django 6.0 (quickest test with latest versions)
-test-quick:
-    @echo "Running quick test (Python 3.14 + Django 6.0)..."
-    ./run-tests.sh 3.14 6.0
+# Run PostgreSQL tests with Python 3.14 + Django 6.0 (quickest test with latest versions)
+test-postgres-quick:
+    @echo "Running quick PostgreSQL test (Python 3.14 + Django 6.0)..."
+    docker compose up --build --exit-code-from test-py314-django60 test-py314-django60
 
-# Run all test combinations across Python 3.12, 3.13, 3.14 and Django 5.0, 5.1, 5.2, 6.0
-test-all:
-    ./run-tests.sh all
+# Run all PostgreSQL test combinations across Python 3.12, 3.13, 3.14 and Django 5.0, 5.1, 5.2, 6.0
+test-postgres-all:
+    @echo "Running all PostgreSQL test combinations..."
+    @echo "Testing Python 3.12 + Django 5.0..."
+    docker compose up --build --exit-code-from test-py312-django50 test-py312-django50
+    @echo "Testing Python 3.12 + Django 5.1..."
+    docker compose up --build --exit-code-from test-py312-django51 test-py312-django51
+    @echo "Testing Python 3.12 + Django 5.2..."
+    docker compose up --build --exit-code-from test-py312-django52 test-py312-django52
+    @echo "Testing Python 3.12 + Django 6.0..."
+    docker compose up --build --exit-code-from test-py312-django60 test-py312-django60
+    @echo "Testing Python 3.13 + Django 5.1..."
+    docker compose up --build --exit-code-from test-py313-django51 test-py313-django51
+    @echo "Testing Python 3.13 + Django 5.2..."
+    docker compose up --build --exit-code-from test-py313-django52 test-py313-django52
+    @echo "Testing Python 3.13 + Django 6.0..."
+    docker compose up --build --exit-code-from test-py313-django60 test-py313-django60
+    @echo "Testing Python 3.14 + Django 5.2..."
+    docker compose up --build --exit-code-from test-py314-django52 test-py314-django52
+    @echo "Testing Python 3.14 + Django 6.0..."
+    docker compose up --build --exit-code-from test-py314-django60 test-py314-django60
 
-# Run tests for specific Python and Django version (e.g., just test 3.13 5.1)
-test py dj:
-    ./run-tests.sh {{py}} {{dj}}
+# Run PostgreSQL tests for specific Python and Django version (e.g., just test-postgres 3.13 5.1)
+test-postgres py dj:
+    #!/bin/bash
+    PY_VER=$(echo "{{py}}" | tr -d '.')
+    DJ_VER=$(echo "{{dj}}" | tr -d '.')
+    echo "Running PostgreSQL tests (Python {{py}} + Django {{dj}})..."
+    docker compose up --build --exit-code-from test-py${PY_VER}-django${DJ_VER} test-py${PY_VER}-django${DJ_VER}
+
+# Run MySQL tests with Python 3.14 + Django 6.0 (quickest test with latest versions)
+test-mysql-quick:
+    @echo "Running quick MySQL test (Python 3.14 + Django 6.0)..."
+    docker compose up --build --exit-code-from test-py314-django60-mysql test-py314-django60-mysql
+
+# Run all MySQL test combinations
+test-mysql-all:
+    @echo "Running all MySQL test combinations..."
+    @echo "Testing Python 3.12 + Django 5.2 (MySQL)..."
+    docker compose up --build --exit-code-from test-py312-django52-mysql test-py312-django52-mysql
+    @echo "Testing Python 3.13 + Django 6.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py313-django60-mysql test-py313-django60-mysql
+    @echo "Testing Python 3.14 + Django 6.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py314-django60-mysql test-py314-django60-mysql
+
+# Run MySQL tests for specific Python and Django version (e.g., just test-mysql 3.14 6.0)
+test-mysql py dj:
+    #!/bin/bash
+    PY_VER=$(echo "{{py}}" | tr -d '.')
+    DJ_VER=$(echo "{{dj}}" | tr -d '.')
+    echo "Running MySQL tests (Python {{py}} + Django {{dj}})..."
+    docker compose up --build --exit-code-from test-py${PY_VER}-django${DJ_VER}-mysql test-py${PY_VER}-django${DJ_VER}-mysql
+
+# Run quick test on both PostgreSQL and MySQL
+test-both-dbs:
+    @echo "Running quick test on both databases..."
+    just test-postgres-quick
+    just test-mysql-quick
+
+# Run all tests on both PostgreSQL and MySQL
+test-both-dbs-all:
+    @echo "Running all tests on both PostgreSQL and MySQL..."
+    @echo ""
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "PostgreSQL Tests"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    just test-postgres-all
+    @echo ""
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "MySQL Tests"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    just test-mysql-all
 
 # Build Docker images
 build:
@@ -31,6 +96,22 @@ db:
     @sleep 5
     @echo "Database is ready!"
 
+# Start the MySQL database service
+db-mysql:
+    @echo "Starting MySQL database..."
+    docker compose up -d mysql
+    @echo "Waiting for database to be ready..."
+    @sleep 10
+    @echo "MySQL is ready!"
+
+# Start both database services
+db-all:
+    @echo "Starting PostgreSQL and MySQL databases..."
+    docker compose up -d db mysql
+    @echo "Waiting for databases to be ready..."
+    @sleep 10
+    @echo "Databases are ready!"
+
 # Open a Python shell in the test environment
 shell:
     docker compose run --rm test-py314-django60 bash
@@ -38,6 +119,10 @@ shell:
 # Open a PostgreSQL shell
 db-shell:
     docker compose exec db psql -U postgres -d django_cities
+
+# Open a MySQL shell
+db-shell-mysql:
+    docker compose exec mysql mysql -u django -pdjango django_cities
 
 # Stop containers and remove volumes
 clean:
@@ -95,55 +180,59 @@ test-file file:
 logs-db:
     docker compose logs -f db
 
+# Show MySQL database logs
+logs-db-mysql:
+    docker compose logs -f mysql
+
 # Show all running containers
 ps:
     docker compose ps
 
-# Run tests for Python 3.12 with all Django versions
-test-py312:
-    @echo "Testing Python 3.12 with all Django versions..."
-    ./run-tests.sh 3.12 5.0
-    ./run-tests.sh 3.12 5.1
-    ./run-tests.sh 3.12 5.2
-    ./run-tests.sh 3.12 6.0
+# Run PostgreSQL tests for Python 3.12 with all Django versions
+test-postgres-py312:
+    @echo "Testing PostgreSQL with Python 3.12 (all Django versions)..."
+    docker compose up --build --exit-code-from test-py312-django50 test-py312-django50
+    docker compose up --build --exit-code-from test-py312-django51 test-py312-django51
+    docker compose up --build --exit-code-from test-py312-django52 test-py312-django52
+    docker compose up --build --exit-code-from test-py312-django60 test-py312-django60
 
-# Run tests for Python 3.13 with all Django versions
-test-py313:
-    @echo "Testing Python 3.13 with all Django versions..."
-    ./run-tests.sh 3.13 5.1
-    ./run-tests.sh 3.13 5.2
-    ./run-tests.sh 3.13 6.0
+# Run PostgreSQL tests for Python 3.13 with all Django versions
+test-postgres-py313:
+    @echo "Testing PostgreSQL with Python 3.13 (all Django versions)..."
+    docker compose up --build --exit-code-from test-py313-django51 test-py313-django51
+    docker compose up --build --exit-code-from test-py313-django52 test-py313-django52
+    docker compose up --build --exit-code-from test-py313-django60 test-py313-django60
 
-# Run tests for Python 3.14 with all Django versions
-test-py314:
-    @echo "Testing Python 3.14 with all Django versions..."
-    ./run-tests.sh 3.14 5.2
-    ./run-tests.sh 3.14 6.0
+# Run PostgreSQL tests for Python 3.14 with all Django versions
+test-postgres-py314:
+    @echo "Testing PostgreSQL with Python 3.14 (all Django versions)..."
+    docker compose up --build --exit-code-from test-py314-django52 test-py314-django52
+    docker compose up --build --exit-code-from test-py314-django60 test-py314-django60
 
-# Run tests for Django 5.0 with all Python versions
-test-django50:
-    @echo "Testing Django 5.0 with all Python versions..."
-    ./run-tests.sh 3.12 5.0
+# Run PostgreSQL tests for Django 5.0 with all Python versions
+test-postgres-django50:
+    @echo "Testing PostgreSQL with Django 5.0 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py312-django50 test-py312-django50
 
-# Run tests for Django 5.1 with all Python versions
-test-django51:
-    @echo "Testing Django 5.1 with all Python versions..."
-    ./run-tests.sh 3.12 5.1
-    ./run-tests.sh 3.13 5.1
+# Run PostgreSQL tests for Django 5.1 with all Python versions
+test-postgres-django51:
+    @echo "Testing PostgreSQL with Django 5.1 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py312-django51 test-py312-django51
+    docker compose up --build --exit-code-from test-py313-django51 test-py313-django51
 
-# Run tests for Django 5.2 with all Python versions
-test-django52:
-    @echo "Testing Django 5.2 with all Python versions..."
-    ./run-tests.sh 3.12 5.2
-    ./run-tests.sh 3.13 5.2
-    ./run-tests.sh 3.14 5.2
+# Run PostgreSQL tests for Django 5.2 with all Python versions
+test-postgres-django52:
+    @echo "Testing PostgreSQL with Django 5.2 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py312-django52 test-py312-django52
+    docker compose up --build --exit-code-from test-py313-django52 test-py313-django52
+    docker compose up --build --exit-code-from test-py314-django52 test-py314-django52
 
-# Run tests for Django 6.0 with all Python versions
-test-django60:
-    @echo "Testing Django 6.0 with all Python versions..."
-    ./run-tests.sh 3.12 6.0
-    ./run-tests.sh 3.13 6.0
-    ./run-tests.sh 3.14 6.0
+# Run PostgreSQL tests for Django 6.0 with all Python versions
+test-postgres-django60:
+    @echo "Testing PostgreSQL with Django 6.0 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py312-django60 test-py312-django60
+    docker compose up --build --exit-code-from test-py313-django60 test-py313-django60
+    docker compose up --build --exit-code-from test-py314-django60 test-py314-django60
 
 # Show environment info
 info:

@@ -16,6 +16,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # MySQL with GIS extension (8.0+ has native spatial support)
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: django_cities
+      MYSQL_USER: django
+      MYSQL_PASSWORD: django
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Test runner - Python 3.12 + Django 5.0
   test-py312-django50:
     build:
@@ -205,5 +225,76 @@ services:
         python test_project/manage.py test test_app --noinput
       "
 
+  # MySQL Test runners
+  # Test runner - Python 3.14 + Django 6.0 + MySQL
+  test-py314-django60-mysql:
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.14"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: django
+      MYSQL_PASSWORD: django
+      MYSQL_DATABASE: django_cities
+      DJANGO_VERSION: "6.0"
+      DB_BACKEND: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pip install 'Django>=6.0,<6.1' mysqlclient &&
+        python test_project/manage.py migrate --noinput --settings=test_app.settings_mysql &&
+        python test_project/manage.py test test_app --noinput --settings=test_app.settings_mysql
+      "
+
+  # Test runner - Python 3.13 + Django 6.0 + MySQL
+  test-py313-django60-mysql:
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.13"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: django
+      MYSQL_PASSWORD: django
+      MYSQL_DATABASE: django_cities
+      DJANGO_VERSION: "6.0"
+      DB_BACKEND: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pip install 'Django>=6.0,<6.1' mysqlclient &&
+        python test_project/manage.py migrate --noinput --settings=test_app.settings_mysql &&
+        python test_project/manage.py test test_app --noinput --settings=test_app.settings_mysql
+      "
+
+  # Test runner - Python 3.12 + Django 5.2 + MySQL
+  test-py312-django52-mysql:
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.12"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: django
+      MYSQL_PASSWORD: django
+      MYSQL_DATABASE: django_cities
+      DJANGO_VERSION: "5.2"
+      DB_BACKEND: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pip install 'Django>=5.2.9,<5.3' mysqlclient &&
+        python test_project/manage.py migrate --noinput --settings=test_app.settings_mysql &&
+        python test_project/manage.py test test_app --noinput --settings=test_app.settings_mysql
+      "
+
 volumes:
   postgres_data:
+  mysql_data:

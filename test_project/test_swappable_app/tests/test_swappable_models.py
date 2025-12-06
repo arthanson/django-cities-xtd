@@ -4,7 +4,6 @@ import os
 
 import swapper
 from django.contrib.gis.geos import Point
-from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 # Import from test_swappable_app settings which configures swapped models

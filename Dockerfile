@@ -11,11 +11,13 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_ROOT_USER_ACTION=ignore
 
-# Install system dependencies for PostgreSQL and PostGIS
+# Install system dependencies for PostgreSQL, MySQL, and PostGIS
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
     libpq-dev \
+    default-libmysqlclient-dev \
+    pkg-config \
     gdal-bin \
     libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
