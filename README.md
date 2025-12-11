@@ -23,8 +23,6 @@ This package officially supports all currently supported versions of Python/Djan
 | :large_blue_circle:   | Tested and passing, but not officially supported                    |
 | :x:                   | Known incompatibilities                                             |
 
-Authored by [Ben Dowling](http://www.coderholic.com), and some great [contributors](https://github.com/arthanson/django-cities-xtd/contributors).
-
 See some of the data in action at [city.io](http://city.io) and [country.io](http://country.io).
 
 ----
