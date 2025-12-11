@@ -114,7 +114,7 @@ class BaseContinent(Place, SlugModel):
 
 
 class Continent(BaseContinent):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
 
     class Meta(BaseContinent.Meta):
         swappable = swapper.swappable_setting("cities", "Continent")
@@ -164,14 +164,14 @@ class BaseCountry(Place, SlugModel):
 
 
 class Country(BaseCountry):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
 
     class Meta(BaseCountry.Meta):
         swappable = swapper.swappable_setting("cities", "Country")
 
 
 class Region(Place, SlugModel):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(max_length=200, db_index=True)
@@ -196,7 +196,7 @@ class Region(Place, SlugModel):
 
 
 class Subregion(Place, SlugModel):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
@@ -262,14 +262,14 @@ class BaseCity(Place, SlugModel):
 
 
 class City(BaseCity):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
 
     class Meta(BaseCity.Meta):
         swappable = swapper.swappable_setting("cities", "City")
 
 
 class District(Place, SlugModel):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
@@ -296,7 +296,7 @@ class District(Place, SlugModel):
 
 
 class AlternativeName(SlugModel):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     KIND = Choices(*ALTERNATIVE_NAME_TYPES)
@@ -324,7 +324,7 @@ class AlternativeName(SlugModel):
 
 
 class PostalCode(Place, SlugModel):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     code = models.CharField(max_length=20)

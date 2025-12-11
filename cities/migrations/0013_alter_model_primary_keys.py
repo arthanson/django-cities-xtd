@@ -10,22 +10,22 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="alternativename",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="city",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="continent",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="country",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="country",
@@ -35,21 +35,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="district",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="postalcode",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="region",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
             model_name="subregion",
             name="id",
-            field=models.AutoField(primary_key=True, serialize=False),
+            field=models.BigAutoField(primary_key=True, serialize=False),
         ),
     ]
