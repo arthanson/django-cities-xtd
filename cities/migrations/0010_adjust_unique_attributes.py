@@ -4,50 +4,76 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-
-UNIQUE_SLUG_MODELS = ['Continent', 'Country', 'Region', 'Subregion', 'District',
-                      'City', 'PostalCode', 'AlternativeName']
+UNIQUE_SLUG_MODELS = [
+    "Continent",
+    "Country",
+    "Region",
+    "Subregion",
+    "District",
+    "City",
+    "PostalCode",
+    "AlternativeName",
+]
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0009_add_slug_fields_to_models'),
+        ("cities", "0009_add_slug_fields_to_models"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='country',
-            name='code',
+            model_name="country",
+            name="code",
             field=models.CharField(db_index=True, max_length=2, unique=True),
         ),
         migrations.AlterField(
-            model_name='country',
-            name='code3',
+            model_name="country",
+            name="code3",
             field=models.CharField(db_index=True, max_length=3, unique=True),
         ),
         migrations.AlterUniqueTogether(
-            name='city',
-            unique_together=set([('country', 'region', 'subregion', 'id', 'name')]),
+            name="city",
+            unique_together=set([("country", "region", "subregion", "id", "name")]),
         ),
         migrations.AlterUniqueTogether(
-            name='district',
-            unique_together=set([('city', 'name')]),
+            name="district",
+            unique_together=set([("city", "name")]),
         ),
         migrations.AlterUniqueTogether(
-            name='postalcode',
-            unique_together=set([
-                ('country', 'region_name', 'subregion_name', 'district_name', 'name', 'id', 'code'),
-                ('country', 'region', 'subregion', 'city', 'district', 'name', 'id', 'code'),
-            ]),
+            name="postalcode",
+            unique_together=set(
+                [
+                    (
+                        "country",
+                        "region_name",
+                        "subregion_name",
+                        "district_name",
+                        "name",
+                        "id",
+                        "code",
+                    ),
+                    (
+                        "country",
+                        "region",
+                        "subregion",
+                        "city",
+                        "district",
+                        "name",
+                        "id",
+                        "code",
+                    ),
+                ]
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='region',
-            unique_together=set([('country', 'name')]),
+            name="region",
+            unique_together=set([("country", "name")]),
         ),
         migrations.AlterUniqueTogether(
-            name='subregion',
-            unique_together=set([('region', 'id', 'name')]),
+            name="subregion",
+            unique_together=set([("region", "id", "name")]),
         ),
     ]
 
@@ -65,14 +91,19 @@ class Migration(migrations.Migration):
         self.operations + [
             migrations.AlterField(
                 model_name=model_name.lower(),
-                name='slug',
-                field=models.CharField(max_length=255))
+                name="slug",
+                field=models.CharField(max_length=255),
+            )
             for model_name in UNIQUE_SLUG_MODELS
             # This is the check that matters. It checks the result of the
             # previous 0009 migration (which may or may not have unique=True
             # set on slug fields) for the unique attribute, and skips it if
             # they don't.
-            if from_state.apps.get_model(app_label, self.model_name)._meta.get_field('slug').unique
+            if from_state.apps.get_model(app_label, self.model_name)
+            ._meta.get_field("slug")
+            .unique
         ]
 
-        super(Migration, self).database_forwards(app_label, schema_editor, from_state, to_state)
+        super(Migration, self).database_forwards(
+            app_label, schema_editor, from_state, to_state
+        )

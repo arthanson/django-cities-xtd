@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-cities"
+version = "0.6.3"
+description = "Place models and worldwide place data for Django"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Ben Dowling", email = "ben.m.dowling@gmail.com"}
+]
+keywords = ["django", "cities", "countries", "regions", "postal codes", "geonames"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "Django>=5.0",
+    "django-model-utils>=5.0.0",
+    "swapper>=1.3.0",
+    "tqdm>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/arthanson/django-cities-xtd"
+
+[project.optional-dependencies]
+test = [
+    "psycopg[binary]>=3.0",
+    "tox>=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cities*"]
+exclude = ["example*", "test_project*"]
+
+[tool.flake8]
+ignore = ["W504", "E501"]
+exclude = ["build", "dist"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable pycodestyle (E), pyflakes (F), and isort (I)
+select = ["E", "F", "I", "W"]
+# Ignore line length (E501)
+ignore = ["E501"]
+exclude = [
+    ".git",
+    ".tox",
+    "build",
+    "dist",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    ".venv",
+    "south_migrations",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cities"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

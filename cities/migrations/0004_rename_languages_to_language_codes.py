@@ -8,18 +8,18 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0003_add_verbose_name_and_related_names'),
+        ("cities", "0003_add_verbose_name_and_related_names"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='alternativename',
-            old_name='language',
-            new_name='language_code',
+            model_name="alternativename",
+            old_name="language",
+            new_name="language_code",
         ),
         migrations.RenameField(
-            model_name='country',
-            old_name='languages',
-            new_name='language_codes',
+            model_name="country",
+            old_name="languages",
+            new_name="language_codes",
         ),
     ]

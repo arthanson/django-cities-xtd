@@ -3,21 +3,20 @@
 from __future__ import unicode_literals
 
 import django.contrib.gis.db.models.fields
-from django.db import migrations, models
 import django.db.models.deletion
-
 import swapper
+from django.db import migrations, models
 
 from ..util import add_continents as util_add_continents
 
 
 def get_model(apps, name):
-    model_tuple = swapper.split(swapper.get_model_name('cities', name))
+    model_tuple = swapper.split(swapper.get_model_name("cities", name))
     return apps.get_model(*model_tuple)
 
 
 def add_continents(apps, schema_editor):
-    util_add_continents(get_model(apps, 'Continent'))
+    util_add_continents(get_model(apps, "Continent"))
 
 
 def rm_continents(apps, schema_editor):
@@ -27,61 +26,85 @@ def rm_continents(apps, schema_editor):
 
 
 def add_continent_fks(apps, schema_editor):
-    Country = get_model(apps, 'Country')
-    Continent = get_model(apps, 'Continent')
+    Country = get_model(apps, "Country")
+    Continent = get_model(apps, "Continent")
 
     for continent in Continent.objects.all():
-        Country.objects.filter(continent_code=continent.code).update(continent=continent)
+        Country.objects.filter(continent_code=continent.code).update(
+            continent=continent
+        )
 
 
 def rm_continent_fks(apps, schema_editor):
-    Country = get_model(apps, 'Country')
-    Continent = get_model(apps, 'Continent')
+    Country = get_model(apps, "Country")
+    Continent = get_model(apps, "Continent")
 
     for continent in Continent.objects.all():
-        Country.objects.filter(continent=continent).update(continent_code=continent.code)
+        Country.objects.filter(continent=continent).update(
+            continent_code=continent.code
+        )
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0001_initial'),
-        swapper.dependency('cities', 'Country'),
+        ("cities", "0001_initial"),
+        swapper.dependency("cities", "Country"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Continent',
+            name="Continent",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(db_index=True, max_length=200, verbose_name='ascii name')),
-                ('slug', models.CharField(max_length=200, unique=True)),
-                ('code', models.CharField(db_index=True, max_length=2, unique=True)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        db_index=True, max_length=200, verbose_name="ascii name"
+                    ),
+                ),
+                ("slug", models.CharField(max_length=200, unique=True)),
+                ("code", models.CharField(db_index=True, max_length=2, unique=True)),
             ],
             options={
-                'abstract': False,
-                'swappable': swapper.swappable_setting('cities', 'Continent'),
+                "abstract": False,
+                "swappable": swapper.swappable_setting("cities", "Continent"),
             },
         ),
         migrations.AddField(
-            model_name='continent',
-            name='alt_names',
-            field=models.ManyToManyField(related_name='cities_continents', to='cities.AlternativeName'),
+            model_name="continent",
+            name="alt_names",
+            field=models.ManyToManyField(
+                related_name="cities_continents", to="cities.AlternativeName"
+            ),
         ),
         migrations.RenameField(
-            model_name='country',
-            old_name='continent',
-            new_name='continent_code',
+            model_name="country",
+            old_name="continent",
+            new_name="continent_code",
         ),
         migrations.AddField(
-            model_name='country',
-            name='continent',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='countries', to=swapper.get_model_name('cities', 'Continent')),
+            model_name="country",
+            name="continent",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="countries",
+                to=swapper.get_model_name("cities", "Continent"),
+            ),
         ),
         migrations.RunPython(add_continents, rm_continents),
         migrations.RunPython(add_continent_fks, rm_continent_fks),
         migrations.RemoveField(
-            model_name='country',
-            name='continent_code',
+            model_name="country",
+            name="continent_code",
         ),
     ]

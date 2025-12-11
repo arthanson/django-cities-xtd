@@ -8,49 +8,49 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0008_add_code_to_district'),
+        ("cities", "0008_add_code_to_district"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='alternativename',
-            name='slug',
+            model_name="alternativename",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='city',
-            name='slug',
+            model_name="city",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='continent',
-            name='slug',
+            model_name="continent",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='country',
-            name='slug',
+            model_name="country",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='district',
-            name='slug',
+            model_name="district",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='postalcode',
-            name='slug',
+            model_name="postalcode",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='region',
-            name='slug',
+            model_name="region",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='subregion',
-            name='slug',
+            model_name="subregion",
+            name="slug",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]

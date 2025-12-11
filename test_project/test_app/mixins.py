@@ -3,18 +3,21 @@ from __future__ import unicode_literals
 
 import re
 
-from cities.models import (Continent, Country, Region, Subregion, City,
-                           District, PostalCode, AlternativeName)
+from cities.models import AlternativeName, City, Continent, Country, District, PostalCode, Region, Subregion
 from cities.util import add_continents
 
 
 class NoInvalidSlugsMixin(object):
     def test_no_invalid_slugs(self):
-        self.assertEqual(Country.objects.filter(slug__startswith='invalid').count(), 0)
-        self.assertEqual(Region.objects.filter(slug__startswith='invalid').count(), 0)
-        self.assertEqual(Subregion.objects.filter(slug__startswith='invalid').count(), 0)
-        self.assertEqual(City.objects.filter(slug__startswith='invalid').count(), 0)
-        self.assertEqual(PostalCode.objects.filter(slug__startswith='invalid').count(), 0)
+        self.assertEqual(Country.objects.filter(slug__startswith="invalid").count(), 0)
+        self.assertEqual(Region.objects.filter(slug__startswith="invalid").count(), 0)
+        self.assertEqual(
+            Subregion.objects.filter(slug__startswith="invalid").count(), 0
+        )
+        self.assertEqual(City.objects.filter(slug__startswith="invalid").count(), 0)
+        self.assertEqual(
+            PostalCode.objects.filter(slug__startswith="invalid").count(), 0
+        )
 
 
 class ContinentsMixin(object):
@@ -40,13 +43,13 @@ class RegionsMixin(object):
 
     def test_num_ad_regions(self):
         self.assertEqual(
-            Region.objects.filter(country__code='AD').count(),
-            self.num_ad_regions)
+            Region.objects.filter(country__code="AD").count(), self.num_ad_regions
+        )
 
     def test_num_ua_regions(self):
         self.assertEqual(
-            Region.objects.filter(country__code='UA').count(),
-            self.num_ua_regions)
+            Region.objects.filter(country__code="UA").count(), self.num_ua_regions
+        )
 
 
 class SubregionsMixin(object):
@@ -60,8 +63,8 @@ class CitiesMixin(object):
 
     def test_num_ua_cities(self):
         self.assertEqual(
-            City.objects.filter(region__country__code='UA').count(),
-            self.num_ua_cities)
+            City.objects.filter(region__country__code="UA").count(), self.num_ua_cities
+        )
 
 
 class DistrictsMixin(object):
@@ -75,8 +78,9 @@ class AlternativeNamesMixin(object):
 
     def test_num_not_und_alternative_names(self):
         self.assertEqual(
-            AlternativeName.objects.exclude(language_code='und').count(),
-            self.num_not_und_alt_names)
+            AlternativeName.objects.exclude(language_code="und").count(),
+            self.num_not_und_alt_names,
+        )
 
 
 class PostalCodesMixin(object):
@@ -84,19 +88,19 @@ class PostalCodesMixin(object):
         self.assertEqual(PostalCode.objects.count(), self.num_postal_codes)
 
     def test_postal_code_slugs(self):
-        pc = PostalCode.objects.get(country__code='RU', code='102104')
-        self.assertEqual(pc.code, '102104')
+        pc = PostalCode.objects.get(country__code="RU", code="102104")
+        self.assertEqual(pc.code, "102104")
         self.assertTrue(len(pc.slug) <= 255)
 
-        slug_rgx = re.compile(r'\d+-102104', re.UNICODE)
+        slug_rgx = re.compile(r"\d+-102104", re.UNICODE)
 
-        slug = PostalCode.objects.get(country__code='RU', code='102104').slug
+        slug = PostalCode.objects.get(country__code="RU", code="102104").slug
 
         # The unittest module in Python 2 does not have an assertRegex
-        if hasattr(self, 'assertRegex'):
+        if hasattr(self, "assertRegex"):
             self.assertRegex(slug, slug_rgx)
         else:
             m = slug_rgx.match(slug)
 
             self.assertIsNotNone(m)
-            self.assertEqual(m.group(0)[-7:], '-102104')
+            self.assertEqual(m.group(0)[-7:], "-102104")

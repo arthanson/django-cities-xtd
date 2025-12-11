@@ -7,13 +7,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cities', '0011_auto_20180108_0706'),
+        ("cities", "0011_auto_20180108_0706"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='country',
-            name='neighbours',
-            field=models.ManyToManyField(related_name='_cities_country_neighbours_+', to=settings.CITIES_COUNTRY_MODEL),
+            model_name="country",
+            name="neighbours",
+            field=models.ManyToManyField(
+                related_name="_cities_country_neighbours_+",
+                to=settings.CITIES_COUNTRY_MODEL,
+            ),
         ),
     ]

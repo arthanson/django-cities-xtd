@@ -1,38 +1,32 @@
 from random import choice
 from string import ascii_uppercase, digits
 
-from .conf import (ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION, DJANGO_VERSION)
-
-
-if DJANGO_VERSION < 4:
-    try:
-        from django.utils.encoding import force_unicode as force_text
-    except (NameError, ImportError):
-        from django.utils.encoding import force_text
-else:
-    from django.utils.encoding import force_str as force_text
-
-from django.db import transaction
-from django.contrib.gis.db.models import PointField
-from django.db import models
-from django.contrib.gis.geos import Point
-
-from model_utils import Choices
 import swapper
+from django.contrib.gis.db.models import PointField
+from django.contrib.gis.geos import Point
+from django.db import models, transaction
+from django.db.models import Manager as GeoManager
+from django.utils.encoding import force_str as force_text
+from model_utils import Choices
 
+from .conf import ALTERNATIVE_NAME_TYPES, SLUGIFY_FUNCTION
 from .managers import AlternativeNameManager
-from .util import unicode_func
+
+# Constants
+INVALID_SLUG_LENGTH = 20  # Length of random string for invalid slugs
 
 __all__ = [
-    'Point', 'Continent', 'Country', 'Region', 'Subregion', 'City', 'District',
-    'PostalCode', 'AlternativeName',
+    "Point",
+    "Continent",
+    "Country",
+    "Region",
+    "Subregion",
+    "City",
+    "District",
+    "PostalCode",
+    "AlternativeName",
 ]
 
-
-if DJANGO_VERSION < 2:
-    from django.contrib.gis.db.models import GeoManager
-else:
-    from django.db.models import Manager as GeoManager
 
 slugify_func = SLUGIFY_FUNCTION
 
@@ -57,18 +51,20 @@ class SlugModel(models.Model):
         self.slug = slugify_func(self, self.slugify())
         # If the slug contains the object's ID and we are creating a new object,
         # save it twice: once to get an ID, another to set the object's slug
-        if self.slug is None and getattr(self, 'slug_contains_id', False):
+        if self.slug is None and getattr(self, "slug_contains_id", False):
             with transaction.atomic():
                 # We first give a randomized slug with a prefix just in case
                 # users need to find invalid slugs
-                self.slug = 'invalid-{}'.format(''.join(choice(ascii_uppercase + digits) for i in range(20)))
+                self.slug = "invalid-{}".format(
+                    "".join(choice(ascii_uppercase + digits) for i in range(INVALID_SLUG_LENGTH))
+                )
                 super(SlugModel, self).save(*args, **kwargs)
                 self.slug = slugify_func(self, self.slugify())
 
                 # If the 'force_insert' flag was passed, don't pass it again:
                 # doing so will attempt to re-insert with the same primary key,
                 # which will cause an IntegrityError.
-                kwargs.pop('force_insert', None)
+                kwargs.pop("force_insert", None)
                 super(SlugModel, self).save(*args, **kwargs)
         else:
             # This is a performance optimization - we avoid the transaction if
@@ -78,7 +74,7 @@ class SlugModel(models.Model):
 
 class Place(models.Model):
     name = models.CharField(max_length=200, db_index=True, verbose_name="ascii name")
-    alt_names = models.ManyToManyField('AlternativeName')
+    alt_names = models.ManyToManyField(swapper.get_model_name("cities", "AlternativeName"))
 
     objects = GeoManager()
 
@@ -99,7 +95,7 @@ class Place(models.Model):
         return force_text(self.name)
 
     def save(self, *args, **kwargs):
-        if hasattr(self, 'clean'):
+        if hasattr(self, "clean"):
             self.clean()
         super(Place, self).save(*args, **kwargs)
 
@@ -118,8 +114,10 @@ class BaseContinent(Place, SlugModel):
 
 
 class Continent(BaseContinent):
+    id = models.BigAutoField(primary_key=True)
+
     class Meta(BaseContinent.Meta):
-        swappable = swapper.swappable_setting('cities', 'Continent')
+        swappable = swapper.swappable_setting("cities", "Continent")
 
 
 class BaseCountry(Place, SlugModel):
@@ -132,19 +130,23 @@ class BaseCountry(Place, SlugModel):
     currency_symbol = models.CharField(max_length=31, blank=True, null=True)
     language_codes = models.CharField(max_length=250, null=True)
     phone = models.CharField(max_length=20)
-    continent = models.ForeignKey(swapper.get_model_name('cities', 'Continent'),
-                                  null=True,
-                                  related_name='countries',
-                                  on_delete=SET_NULL_OR_CASCADE)
-    tld = models.CharField(max_length=5, verbose_name='TLD')
+    continent = models.ForeignKey(
+        swapper.get_model_name("cities", "Continent"),
+        null=True,
+        related_name="countries",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    tld = models.CharField(max_length=5, verbose_name="TLD")
     postal_code_format = models.CharField(max_length=127)
     postal_code_regex = models.CharField(max_length=255)
     capital = models.CharField(max_length=100)
-    neighbours = models.ManyToManyField("self", related_name='_cities_country_neighbours_+')
+    neighbours = models.ManyToManyField(
+        "self",
+    )
 
     class Meta:
         abstract = True
-        ordering = ['name']
+        ordering = ["name"]
         verbose_name_plural = "countries"
 
     @property
@@ -162,44 +164,47 @@ class BaseCountry(Place, SlugModel):
 
 
 class Country(BaseCountry):
+    id = models.BigAutoField(primary_key=True)
+
     class Meta(BaseCountry.Meta):
-        swappable = swapper.swappable_setting('cities', 'Country')
+        swappable = swapper.swappable_setting("cities", "Country")
 
 
 class Region(Place, SlugModel):
+    id = models.BigAutoField(primary_key=True)
+
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(max_length=200, db_index=True)
-    country = models.ForeignKey(swapper.get_model_name('cities', 'Country'),
-                                related_name='regions',
-                                on_delete=SET_NULL_OR_CASCADE)
+    country = models.ForeignKey(
+        swapper.get_model_name("cities", "Country"),
+        related_name="regions",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
 
     class Meta:
-        unique_together = (('country', 'name'),)
+        unique_together = (("country", "name"),)
 
     @property
     def parent(self):
         return self.country
 
     def full_code(self):
-        return unicode_func(".".join([self.parent.code, self.code]))
+        return str(".".join([self.parent.code, self.code]))
 
     def slugify(self):
-        return '{}_({})'.format(
-            unicode_func(self.name),
-            unicode_func(self.full_code()))
+        return "{}_({})".format(str(self.name), str(self.full_code()))
 
 
 class Subregion(Place, SlugModel):
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(max_length=200, db_index=True)
-    region = models.ForeignKey(Region,
-                               related_name='subregions',
-                               on_delete=SET_NULL_OR_CASCADE)
+    region = models.ForeignKey(Region, related_name="subregions", on_delete=SET_NULL_OR_CASCADE)
 
     class Meta:
-        unique_together = (('region', 'id', 'name'),)
+        unique_together = (("region", "id", "name"),)
 
     @property
     def parent(self):
@@ -209,28 +214,32 @@ class Subregion(Place, SlugModel):
         return ".".join([self.parent.parent.code, self.parent.code, self.code])
 
     def slugify(self):
-        return unicode_func('{}-{}').format(
-            unicode_func(self.id),
-            unicode_func(self.name))
+        return "{}-{}".format(self.id, str(self.name))
 
 
 class BaseCity(Place, SlugModel):
     slug_contains_id = True
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
-    country = models.ForeignKey(swapper.get_model_name('cities', 'Country'),
-                                related_name='cities',
-                                on_delete=SET_NULL_OR_CASCADE)
-    region = models.ForeignKey(Region,
-                               null=True,
-                               blank=True,
-                               related_name='cities',
-                               on_delete=SET_NULL_OR_CASCADE)
-    subregion = models.ForeignKey(Subregion,
-                                  null=True,
-                                  blank=True,
-                                  related_name='cities',
-                                  on_delete=SET_NULL_OR_CASCADE)
+    country = models.ForeignKey(
+        swapper.get_model_name("cities", "Country"),
+        related_name="cities",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    region = models.ForeignKey(
+        Region,
+        null=True,
+        blank=True,
+        related_name="cities",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    subregion = models.ForeignKey(
+        Subregion,
+        null=True,
+        blank=True,
+        related_name="cities",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
     location = PointField()
     population = models.IntegerField()
     elevation = models.IntegerField(null=True)
@@ -239,7 +248,7 @@ class BaseCity(Place, SlugModel):
 
     class Meta:
         abstract = True
-        unique_together = (('country', 'region', 'subregion', 'id', 'name'),)
+        unique_together = (("country", "region", "subregion", "id", "name"),)
         verbose_name_plural = "cities"
 
     @property
@@ -248,28 +257,33 @@ class BaseCity(Place, SlugModel):
 
     def slugify(self):
         if self.id:
-            return '{}-{}'.format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
 class City(BaseCity):
+    id = models.BigAutoField(primary_key=True)
+
     class Meta(BaseCity.Meta):
-        swappable = swapper.swappable_setting('cities', 'City')
+        swappable = swapper.swappable_setting("cities", "City")
 
 
 class District(Place, SlugModel):
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     name_std = models.CharField(max_length=200, db_index=True, verbose_name="standard name")
     code = models.CharField(blank=True, db_index=True, max_length=200, null=True)
     location = PointField()
     population = models.IntegerField()
-    city = models.ForeignKey(swapper.get_model_name('cities', 'City'),
-                             related_name='districts',
-                             on_delete=SET_NULL_OR_CASCADE)
+    city = models.ForeignKey(
+        swapper.get_model_name("cities", "City"),
+        related_name="districts",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
 
     class Meta:
-        unique_together = (('city', 'name'),)
+        unique_together = (("city", "name"),)
 
     @property
     def parent(self):
@@ -277,11 +291,12 @@ class District(Place, SlugModel):
 
     def slugify(self):
         if self.id:
-            return '{}-{}'.format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
 class AlternativeName(SlugModel):
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     KIND = Choices(*ALTERNATIVE_NAME_TYPES)
@@ -296,57 +311,88 @@ class AlternativeName(SlugModel):
 
     objects = AlternativeNameManager()
 
+    class Meta:
+        swappable = swapper.swappable_setting("cities", "AlternativeName")
+
     def __str__(self):
         return "%s (%s)" % (force_text(self.name), force_text(self.language_code))
 
     def slugify(self):
         if self.id:
-            return '{}-{}'.format(self.id, unicode_func(self.name))
+            return "{}-{}".format(self.id, str(self.name))
         return None
 
 
 class PostalCode(Place, SlugModel):
+    id = models.BigAutoField(primary_key=True)
     slug_contains_id = True
 
     code = models.CharField(max_length=20)
     location = PointField()
 
-    country = models.ForeignKey(swapper.get_model_name('cities', 'Country'),
-                                related_name='postal_codes',
-                                on_delete=SET_NULL_OR_CASCADE)
+    country = models.ForeignKey(
+        swapper.get_model_name("cities", "Country"),
+        related_name="postal_codes",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
 
     # Region names for each admin level, region may not exist in DB
     region_name = models.CharField(max_length=100, db_index=True)
     subregion_name = models.CharField(max_length=100, db_index=True)
     district_name = models.CharField(max_length=100, db_index=True)
 
-    region = models.ForeignKey(Region,
-                               blank=True,
-                               null=True,
-                               related_name='postal_codes',
-                               on_delete=SET_NULL_OR_CASCADE)
-    subregion = models.ForeignKey(Subregion,
-                                  blank=True,
-                                  null=True,
-                                  related_name='postal_codes',
-                                  on_delete=SET_NULL_OR_CASCADE)
-    city = models.ForeignKey(swapper.get_model_name('cities', 'City'),
-                             blank=True,
-                             null=True,
-                             related_name='postal_codes',
-                             on_delete=SET_NULL_OR_CASCADE)
-    district = models.ForeignKey(District,
-                                 blank=True,
-                                 null=True,
-                                 related_name='postal_codes',
-                                 on_delete=SET_NULL_OR_CASCADE)
+    region = models.ForeignKey(
+        Region,
+        blank=True,
+        null=True,
+        related_name="postal_codes",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    subregion = models.ForeignKey(
+        Subregion,
+        blank=True,
+        null=True,
+        related_name="postal_codes",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    city = models.ForeignKey(
+        swapper.get_model_name("cities", "City"),
+        blank=True,
+        null=True,
+        related_name="postal_codes",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
+    district = models.ForeignKey(
+        District,
+        blank=True,
+        null=True,
+        related_name="postal_codes",
+        on_delete=SET_NULL_OR_CASCADE,
+    )
 
     objects = GeoManager()
 
     class Meta:
         unique_together = (
-            ('country', 'region', 'subregion', 'city', 'district', 'name', 'id', 'code'),
-            ('country', 'region_name', 'subregion_name', 'district_name', 'name', 'id', 'code'),
+            (
+                "country",
+                "region",
+                "subregion",
+                "city",
+                "district",
+                "name",
+                "id",
+                "code",
+            ),
+            (
+                "country",
+                "region_name",
+                "subregion_name",
+                "district_name",
+                "name",
+                "id",
+                "code",
+            ),
         )
 
     @property
@@ -356,23 +402,27 @@ class PostalCode(Place, SlugModel):
     @property
     def name_full(self):
         """Get full name including hierarchy"""
-        return force_text(', '.join(reversed(self.names)))
+        return force_text(", ".join(reversed(self.names)))
 
     @property
     def names(self):
         """Get a hierarchy of non-null names, root first"""
-        return [e for e in [
-            force_text(self.country),
-            force_text(self.region_name),
-            force_text(self.subregion_name),
-            force_text(self.district_name),
-            force_text(self.name),
-        ] if e]
+        return [
+            e
+            for e in [
+                force_text(self.country),
+                force_text(self.region_name),
+                force_text(self.subregion_name),
+                force_text(self.district_name),
+                force_text(self.name),
+            ]
+            if e
+        ]
 
     def __str__(self):
         return force_text(self.code)
 
     def slugify(self):
         if self.id:
-            return '{}-{}'.format(self.id, unicode_func(self.code))
+            return "{}-{}".format(self.id, str(self.code))
         return None

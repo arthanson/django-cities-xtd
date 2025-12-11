@@ -22,10 +22,10 @@ CITIES_PLUGINS_RESET_QUERIES_CHANCE = 1.0 / 1000000
 
 import random
 
-from django.db import reset_queries
 from django.conf import settings
+from django.db import reset_queries
 
-reset_chance = getattr(settings, 'CITIES_PLUGINS_RESET_QUERIES_CHANCE', 0.000002)
+reset_chance = getattr(settings, "CITIES_PLUGINS_RESET_QUERIES_CHANCE", 0.000002)
 
 
 class Plugin:
