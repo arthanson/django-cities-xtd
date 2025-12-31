@@ -2,7 +2,7 @@
 
 ## Place models and worldwide place data for Django
 
-[![PyPI version](https://badge.fury.io/py/django-cities.svg)](https://badge.fury.io/py/django-cities) [![Build status](https://travis-ci.org/arthanson/django-cities-xtd.svg?branch=master)](https://travis-ci.org/arthanson/django-cities-xtd.svg?branch=master)
+[![PyPI version](https://badge.fury.io/py/django-cities-xtd.svg)](https://badge.fury.io/py/django-cities-xtd) [![Build status](https://travis-ci.org/arthanson/django-cities-xtd.svg?branch=master)](https://travis-ci.org/arthanson/django-cities-xtd.svg?branch=master)
 
 ----
 
