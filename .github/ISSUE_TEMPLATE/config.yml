@@ -1,0 +1,9 @@
+# Reference: https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://arthanson.github.io/django-cities-xtd/
+    about: "Please check the documentation before opening an issue."
+  - name: ❓ Discussion
+    url: https://github.com/arthanson/django-cities-xtd/discussions
+    about: "If you're just looking for help, try starting a discussion instead."

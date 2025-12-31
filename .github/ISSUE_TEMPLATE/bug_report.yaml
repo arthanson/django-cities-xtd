@@ -1,0 +1,82 @@
+---
+name: 🐛 Bug Report
+description: Report a reproducible bug in the current release of django-cities-xtd
+labels: ["type: bug", "status: needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **NOTE:** This form is only for reporting _reproducible bugs_ in a current django-cities-xtd release.
+  - type: input
+    attributes:
+      label: django-cities-xtd version
+      description: What version of django-cities-xtd are you currently running?
+      placeholder: 0.6.3
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Django version
+      description: What version of Django are you currently running?
+      placeholder: 5.2
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Python version
+      description: What version of Python are you currently running?
+      options:
+        - "3.12"
+        - "3.13"
+        - "3.14"
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Database
+      description: What database are you using?
+      options:
+        - PostgreSQL (with PostGIS)
+        - MySQL/MariaDB
+        - SQLite (with Spatialite)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: >
+        Please provide a minimal working example to demonstrate the bug. Begin with the
+        initialization of any necessary database objects and clearly enumerate each
+        operation carried out. Ensure that your example is as concise as possible
+        while adequately illustrating the issue. For example:
+        ```python
+        from cities.models import Country, City
+
+        # Your minimal example here
+
+        ```
+
+        _Please refrain from including any confidential or sensitive
+        information in your example._
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The query should return the expected results without raising any errors
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Observed Behavior
+      description: What happened instead?
+      placeholder: A ValueError exception was raised
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Traceback
+      description: If applicable, include the full traceback/error message.
+      render: shell
