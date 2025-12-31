@@ -11,7 +11,7 @@ body:
     attributes:
       label: django-cities-xtd version
       description: What version of django-cities-xtd are you currently running?
-      placeholder: 0.6.3
+      placeholder: 0.7.0
     validations:
       required: true
   - type: input
