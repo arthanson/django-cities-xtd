@@ -1,0 +1,64 @@
+# Theme configuration
+theme: just-the-docs
+
+# Site settings
+title: django-cities-xtd
+description: Place models and worldwide place data for Django
+url: https://arthanson.github.io
+baseurl: /django-cities-xtd
+
+# GitHub repository
+github:
+  repository_url: https://github.com/arthanson/django-cities-xtd
+
+# Search
+search_enabled: true
+search:
+  heading_level: 2
+  content_level: 2
+
+# Navigation
+nav_external_links:
+  - title: GitHub
+    url: https://github.com/arthanson/django-cities-xtd
+  - title: PyPI
+    url: https://pypi.org/project/django-cities-xtd/
+
+# Footer content
+footer_content: "Copyright &copy; 2024 django-cities-xtd contributors. Distributed under an open source license."
+
+# Color scheme
+color_scheme: light
+
+# Aux links (shown in top right)
+aux_links:
+  "GitHub":
+    - "//github.com/arthanson/django-cities-xtd"
+
+# Heading anchor links
+heading_anchors: true
+
+# Footer last edited
+last_edit_timestamp: true
+last_edit_time_format: "%b %e %Y at %I:%M %p"
+
+# Mermaid diagrams (if needed)
+mermaid:
+  version: "9.4.3"
+
+# Exclude files from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - .git
+  - .gitignore
+  - .sass-cache/
+  - .jekyll-cache/
+  - .jekyll-metadata
+  - .bundle/
+  - .vscode/
+  - .idea/

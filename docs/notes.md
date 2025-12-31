@@ -1,3 +1,9 @@
+---
+layout: default
+title: Notes
+nav_order: 10
+---
+
 # Notes
 
 Some datasets are very large (> 100 MB) and take time to download/import.

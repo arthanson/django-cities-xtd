@@ -1,3 +1,9 @@
+---
+layout: default
+title: Third Party Apps
+nav_order: 8
+---
+
 # Third-party Apps / Extensions
 
 These are apps that build on top of the `django-cities`. Useful for essentially extending what `django-cities` can do.

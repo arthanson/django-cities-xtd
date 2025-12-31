@@ -1,3 +1,9 @@
+---
+layout: default
+title: Running Tests
+nav_order: 11
+---
+
 # Running Tests
 
 We provide a comprehensive Docker-based test environment that automatically sets up PostgreSQL with PostGIS and tests against multiple Python and Django versions.

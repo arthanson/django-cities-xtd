@@ -1,3 +1,9 @@
+---
+layout: default
+title: Configuration
+nav_order: 4
+---
+
 # Configuration
 
 You'll need to enable GeoDjango. See that [documentation](https://docs.djangoproject.com/en/stable/ref/contrib/gis/tutorial/#setting-up) for guidance.

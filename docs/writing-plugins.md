@@ -1,3 +1,9 @@
+---
+layout: default
+title: Writing Plugins
+nav_order: 5
+---
+
 # Writing Plugins
 
 You can write plugins that modify data before and after it is processed by the import script. For example, you can use this to adjust the continent a country belongs to, or you can use it to add or modify any additional data if you customize and override any django-cities models.

@@ -1,3 +1,9 @@
+---
+layout: default
+title: Development
+nav_order: 6
+---
+
 # Development
 
 If you're contributing to django-cities, we provide code quality tools and pre-commit hooks to ensure consistent code style and catch common issues.

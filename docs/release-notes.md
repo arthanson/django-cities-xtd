@@ -1,3 +1,9 @@
+---
+layout: default
+title: Release Notes
+nav_order: 12
+---
+
 # Release Notes
 
 > **Note**: For a complete changelog of all versions, see [CHANGELOG.md](../../CHANGELOG.md) in the project root.

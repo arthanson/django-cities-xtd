@@ -1,3 +1,9 @@
+---
+layout: default
+title: Examples
+nav_order: 7
+---
+
 # Examples
 
 This repository contains an example project which lets you browse the place hierarchy. See the [`example directory`](https://github.com/arthanson/django-cities-xtd/tree/master/example). Below are some small snippets to show you the kind of queries that are possible once you have imported data:

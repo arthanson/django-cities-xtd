@@ -1,4 +1,10 @@
-# django-cities
+---
+layout: default
+title: Home
+nav_order: 1
+---
+
+# django-cities-xtd
 
 ## Place models and worldwide place data for Django
 
