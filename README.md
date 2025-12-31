@@ -8,6 +8,8 @@
 
 **Note**: This repository was moved from `django-cities` as currently can't release new packages from the `django-cities` repository. `django-cities-xtd` is a completely drop-in replacement and is just a more modern fork of this repository with Django 6.0 compatibility, performance enhancements and bugfixes.
 
+----
+
 django-cities-xtd provides you with place related models (eg. Country, Region, City) and data (from [GeoNames](http://www.geonames.org/)) that can be used in your django projects.
 
 This package officially supports all currently supported versions of Python/Django:
