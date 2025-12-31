@@ -1,5 +1,9 @@
-# Theme configuration
-theme: just-the-docs
+# Theme configuration (using remote_theme for GitHub Pages compatibility)
+remote_theme: just-the-docs/just-the-docs
+
+# Plugins
+plugins:
+  - jekyll-remote-theme
 
 # Site settings
 title: django-cities-xtd
