@@ -3,13 +3,14 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "django-cities"
+name = "django-cities-xtd"
 version = "0.6.3"
 description = "Place models and worldwide place data for Django"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
+    {name = "Arthur Hanson", email = "worldnomad@gmail.com"},
     {name = "Ben Dowling", email = "ben.m.dowling@gmail.com"}
 ]
 keywords = ["django", "cities", "countries", "regions", "postal codes", "geonames"]
