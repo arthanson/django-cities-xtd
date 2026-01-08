@@ -1,5 +1,11 @@
 # Changelog #
 
+## v0.7.1 ##
+
+### Fixed ###
+
+- Corrected minimum Python version support to Python 3.10
+
 ## v0.7.0 ##
 
 ### Added ###

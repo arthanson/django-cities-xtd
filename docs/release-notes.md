@@ -8,6 +8,24 @@ nav_order: 12
 
 > **Note**: For a complete changelog of all versions, see [CHANGELOG.md](../../CHANGELOG.md) in the project root.
 
+## 0.7.1
+
+**Bug Fix Release: Python 3.10 Support**
+
+This release corrects the minimum Python version support which was incorrectly set to Python 3.12 in version 0.7.0. The package now correctly supports Python 3.10 as the minimum version.
+
+### Changes
+
+- **Corrected Python Version Support**: Fixed minimum Python version to be Python 3.10 (was incorrectly requiring Python 3.12)
+
+### Upgrading
+
+No breaking changes. Simply update your package:
+
+```bash
+pip install --upgrade django-cities-xtd
+```
+
 ## 0.7.0
 
 **Major Release: Refactoring, Performance Improvements, and Django 6 Compatibility**
