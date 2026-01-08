@@ -28,12 +28,12 @@ This release includes significant refactoring, performance improvements, and add
 
 - Removed support for Django 1.x, 2.x, and 3.x
 - Removed support for very old Python versions
-- Requires Python 3.12+ and Django 5.0+
+- Requires Python 3.10+ and Django 5.0+ (Django 6.0 requires Python 3.12+)
 
 ### Upgrading
 
 When upgrading to 0.7.0, ensure you:
-1. Are using Python 3.12+ and Django 5.0+
+1. Are using Python 3.10+ and Django 5.0+ (or Python 3.12+ for Django 6.0)
 2. Run migrations: `python manage.py migrate cities`
 3. Review any custom importer code as the importer architecture has changed
 
