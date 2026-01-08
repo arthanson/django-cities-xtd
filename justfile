@@ -10,9 +10,21 @@ test-postgres-quick:
     @echo "Running quick PostgreSQL test (Python 3.14 + Django 6.0)..."
     docker compose up --build --exit-code-from test-py314-django60 test-py314-django60
 
-# Run all PostgreSQL test combinations across Python 3.12, 3.13, 3.14 and Django 5.0, 5.1, 5.2, 6.0
+# Run all PostgreSQL test combinations across Python 3.10-3.14 and Django 5.0, 5.1, 5.2, 6.0
 test-postgres-all:
     @echo "Running all PostgreSQL test combinations..."
+    @echo "Testing Python 3.10 + Django 5.0..."
+    docker compose up --build --exit-code-from test-py310-django50 test-py310-django50
+    @echo "Testing Python 3.10 + Django 5.1..."
+    docker compose up --build --exit-code-from test-py310-django51 test-py310-django51
+    @echo "Testing Python 3.10 + Django 5.2..."
+    docker compose up --build --exit-code-from test-py310-django52 test-py310-django52
+    @echo "Testing Python 3.11 + Django 5.0..."
+    docker compose up --build --exit-code-from test-py311-django50 test-py311-django50
+    @echo "Testing Python 3.11 + Django 5.1..."
+    docker compose up --build --exit-code-from test-py311-django51 test-py311-django51
+    @echo "Testing Python 3.11 + Django 5.2..."
+    docker compose up --build --exit-code-from test-py311-django52 test-py311-django52
     @echo "Testing Python 3.12 + Django 5.0..."
     docker compose up --build --exit-code-from test-py312-django50 test-py312-django50
     @echo "Testing Python 3.12 + Django 5.1..."
@@ -48,10 +60,34 @@ test-mysql-quick:
 # Run all MySQL test combinations
 test-mysql-all:
     @echo "Running all MySQL test combinations..."
+    @echo "Testing Python 3.10 + Django 5.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py310-django50-mysql test-py310-django50-mysql
+    @echo "Testing Python 3.10 + Django 5.1 (MySQL)..."
+    docker compose up --build --exit-code-from test-py310-django51-mysql test-py310-django51-mysql
+    @echo "Testing Python 3.10 + Django 5.2 (MySQL)..."
+    docker compose up --build --exit-code-from test-py310-django52-mysql test-py310-django52-mysql
+    @echo "Testing Python 3.11 + Django 5.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py311-django50-mysql test-py311-django50-mysql
+    @echo "Testing Python 3.11 + Django 5.1 (MySQL)..."
+    docker compose up --build --exit-code-from test-py311-django51-mysql test-py311-django51-mysql
+    @echo "Testing Python 3.11 + Django 5.2 (MySQL)..."
+    docker compose up --build --exit-code-from test-py311-django52-mysql test-py311-django52-mysql
+    @echo "Testing Python 3.12 + Django 5.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py312-django50-mysql test-py312-django50-mysql
+    @echo "Testing Python 3.12 + Django 5.1 (MySQL)..."
+    docker compose up --build --exit-code-from test-py312-django51-mysql test-py312-django51-mysql
     @echo "Testing Python 3.12 + Django 5.2 (MySQL)..."
     docker compose up --build --exit-code-from test-py312-django52-mysql test-py312-django52-mysql
+    @echo "Testing Python 3.12 + Django 6.0 (MySQL)..."
+    docker compose up --build --exit-code-from test-py312-django60-mysql test-py312-django60-mysql
+    @echo "Testing Python 3.13 + Django 5.1 (MySQL)..."
+    docker compose up --build --exit-code-from test-py313-django51-mysql test-py313-django51-mysql
+    @echo "Testing Python 3.13 + Django 5.2 (MySQL)..."
+    docker compose up --build --exit-code-from test-py313-django52-mysql test-py313-django52-mysql
     @echo "Testing Python 3.13 + Django 6.0 (MySQL)..."
     docker compose up --build --exit-code-from test-py313-django60-mysql test-py313-django60-mysql
+    @echo "Testing Python 3.14 + Django 5.2 (MySQL)..."
+    docker compose up --build --exit-code-from test-py314-django52-mysql test-py314-django52-mysql
     @echo "Testing Python 3.14 + Django 6.0 (MySQL)..."
     docker compose up --build --exit-code-from test-py314-django60-mysql test-py314-django60-mysql
 
@@ -188,6 +224,20 @@ logs-db-mysql:
 ps:
     docker compose ps
 
+# Run PostgreSQL tests for Python 3.10 with all Django versions
+test-postgres-py310:
+    @echo "Testing PostgreSQL with Python 3.10 (all Django versions)..."
+    docker compose up --build --exit-code-from test-py310-django50 test-py310-django50
+    docker compose up --build --exit-code-from test-py310-django51 test-py310-django51
+    docker compose up --build --exit-code-from test-py310-django52 test-py310-django52
+
+# Run PostgreSQL tests for Python 3.11 with all Django versions
+test-postgres-py311:
+    @echo "Testing PostgreSQL with Python 3.11 (all Django versions)..."
+    docker compose up --build --exit-code-from test-py311-django50 test-py311-django50
+    docker compose up --build --exit-code-from test-py311-django51 test-py311-django51
+    docker compose up --build --exit-code-from test-py311-django52 test-py311-django52
+
 # Run PostgreSQL tests for Python 3.12 with all Django versions
 test-postgres-py312:
     @echo "Testing PostgreSQL with Python 3.12 (all Django versions)..."
@@ -212,17 +262,23 @@ test-postgres-py314:
 # Run PostgreSQL tests for Django 5.0 with all Python versions
 test-postgres-django50:
     @echo "Testing PostgreSQL with Django 5.0 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py310-django50 test-py310-django50
+    docker compose up --build --exit-code-from test-py311-django50 test-py311-django50
     docker compose up --build --exit-code-from test-py312-django50 test-py312-django50
 
 # Run PostgreSQL tests for Django 5.1 with all Python versions
 test-postgres-django51:
     @echo "Testing PostgreSQL with Django 5.1 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py310-django51 test-py310-django51
+    docker compose up --build --exit-code-from test-py311-django51 test-py311-django51
     docker compose up --build --exit-code-from test-py312-django51 test-py312-django51
     docker compose up --build --exit-code-from test-py313-django51 test-py313-django51
 
 # Run PostgreSQL tests for Django 5.2 with all Python versions
 test-postgres-django52:
     @echo "Testing PostgreSQL with Django 5.2 (all Python versions)..."
+    docker compose up --build --exit-code-from test-py310-django52 test-py310-django52
+    docker compose up --build --exit-code-from test-py311-django52 test-py311-django52
     docker compose up --build --exit-code-from test-py312-django52 test-py312-django52
     docker compose up --build --exit-code-from test-py313-django52 test-py313-django52
     docker compose up --build --exit-code-from test-py314-django52 test-py314-django52

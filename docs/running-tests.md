@@ -37,7 +37,7 @@ This will test with Python 3.14 and Django 6.0.
 
 ## Run All Test Combinations
 
-Test against all supported Python (3.12, 3.13, 3.14) and Django (5.0, 5.1, 5.2, 6.0) combinations:
+Test against all supported Python (3.10, 3.11, 3.12, 3.13, 3.14) and Django (5.0, 5.1, 5.2, 6.0) combinations:
 
 ```bash
 just test-all
@@ -79,6 +79,8 @@ just test-django52
 
 ## Available Test Combinations
 
+- **Python 3.10**: Django 5.0, 5.1, 5.2
+- **Python 3.11**: Django 5.0, 5.1, 5.2
 - **Python 3.12**: Django 5.0, 5.1, 5.2, 6.0
 - **Python 3.13**: Django 5.1, 5.2, 6.0
 - **Python 3.14**: Django 5.2, 6.0

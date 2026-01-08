@@ -16,12 +16,12 @@ django-cities provides you with place related models (eg. Country, Region, City)
 
 This package officially supports all currently supported versions of Python/Django:
 
-|      Python   | 3.12                | 3.13                  | 3.14                  |
-| :------------ | ------------------- | --------------------- | --------------------- |
-| Django 5.0    | :white_check_mark:  | :x:                   | :x:                   |
-| Django 5.1    | :white_check_mark:  | :white_check_mark:    | :x:                   |
-| Django 5.2    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:    |
-| Django 6.0    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:    |
+|      Python   | 3.10                | 3.11                  | 3.12                | 3.13                  | 3.14                  |
+| :------------ | ------------------- | --------------------- | ------------------- | --------------------- | --------------------- |
+| Django 5.0    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:  | :x:                   | :x:                   |
+| Django 5.1    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:  | :white_check_mark:    | :x:                   |
+| Django 5.2    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:  | :white_check_mark:    | :white_check_mark:    |
+| Django 6.0    | :x:                 | :x:                   | :white_check_mark:  | :white_check_mark:    | :white_check_mark:    |
 
 | Key                   |                                                                     |
 | :-------------------: | :------------------------------------------------------------------ |
